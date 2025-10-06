@@ -8,7 +8,7 @@ export default function Home() {
           Find your Match!
         </h1>
         <p className="py-4 text-base-content/70">
-          Du suchst nach Gegnern für Freundschaftsspiele, ohne WhatsApp-Chaos?<br></br>
+          Du suchst nach Gegnern für Freundschaftsspiele - ohne WhatsApp-Chaos?<br></br>
           Hier bist Du richtig!
         </p>
       </section>
