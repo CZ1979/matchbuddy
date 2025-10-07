@@ -165,7 +165,6 @@ Das Projekt ist über **GitHub Actions** mit Firebase Hosting verknüpft.
 **Christof Zahn**  
 MatchBuddy – *Because finding matches should be fun, not frustrating.*
 
-📧 [christof@skg.de](mailto:christof@skg.de)  
 🌐 [https://cz1979.github.io](https://cz1979.github.io)
 
 ---
