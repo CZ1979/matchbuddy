@@ -38,7 +38,6 @@ export default function Games() {
 
   const trainerProfile = JSON.parse(localStorage.getItem("trainerProfile") || "{}");
 
-  // Altersklassen
   useEffect(() => {
     const year = new Date().getFullYear();
     const list = [];
@@ -46,7 +45,6 @@ export default function Games() {
     setAgeGroups(list);
   }, []);
 
-  // Firestore Sync
   useEffect(() => {
     const q = query(collection(db, "games"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, (snap) => {
@@ -60,14 +58,12 @@ export default function Games() {
     return () => unsub();
   }, []);
 
-  // Initialer Standort
   useEffect(() => {
     if (location && !center) {
       setCenter({ lat: location.lat, lng: location.lng, label: "Mein Standort" });
     }
   }, [location]);
 
-  // 🔍 Geocoding für manuelle Ortssuche
   const handleSearch = async () => {
     const queryStr = filter.locationQuery.trim();
     if (!queryStr) return;
@@ -103,11 +99,9 @@ export default function Games() {
       setCenter({ lat: location.lat, lng: location.lng, label: "Mein Standort" });
   };
 
-  // 🧮 Filterlogik
   const filtered = useMemo(() => {
     return games.filter((g) => {
       if (filter.ageGroup && !g.ageGroup?.startsWith(filter.ageGroup)) return false;
-
       const strengthNum = Number(g.strength);
       if (!isNaN(strengthNum) && strengthNum < filter.minStrength) return false;
 
@@ -121,7 +115,6 @@ export default function Games() {
     });
   }, [games, filter, center]);
 
-  // ✅ Google Maps Link bevorzugt Adresse, fallback auf Koordinaten
   const routeHref = (g) => {
     const destination = [g.address, g.zip, g.city].filter(Boolean).join(", ");
     if (destination) {
@@ -133,22 +126,18 @@ export default function Games() {
     return null;
   };
 
-  // WhatsApp Nachricht mit Gruß
   const whatsappMessage = (g) => {
     const date = formatDateGerman(g.date);
     let text = `Hallo! Sucht ihr noch einen Gegner für euer Spiel am ${date}? Wir hätten Interesse!`;
-
     const first = trainerProfile.firstName || "";
     const last = trainerProfile.lastName || "";
     const club = trainerProfile.club || "";
-
     const namePart = [first, last].filter(Boolean).join(" ");
     if (namePart || club) {
       text += `\n\nViele Grüße`;
       if (namePart) text += `,\n${namePart}`;
       if (club) text += `\n${club}`;
     }
-
     return encodeURIComponent(text);
   };
 
@@ -159,10 +148,10 @@ export default function Games() {
         <div className="card-body space-y-3">
           <h2 className="card-title text-primary">Spiele suchen</h2>
 
-          {/* Jahrgang + Stärke nebeneinander */}
-          <div className="flex flex-col sm:flex-row gap-3">
+          {/* Jahrgang + Stärke kompakt nebeneinander (links ausgerichtet) */}
+          <div className="flex flex-wrap items-center gap-3 justify-start">
             <select
-              className="select select-bordered flex-1"
+              className="select select-bordered w-auto min-w-[150px] sm:min-w-[160px] max-w-[180px]"
               value={filter.ageGroup}
               onChange={(e) => setFilter((s) => ({ ...s, ageGroup: e.target.value }))}
             >
@@ -174,19 +163,38 @@ export default function Games() {
               ))}
             </select>
 
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-base-content/70">ab</label>
-              <input
-                type="number"
-                min="1"
-                max="10"
-                value={filter.minStrength}
-                onChange={(e) =>
-                  setFilter((s) => ({ ...s, minStrength: Number(e.target.value) }))
-                }
-                className="input input-bordered w-24 text-center"
-              />
-              <span className="text-sm text-base-content/70">Stärke</span>
+            {/* Stärke-Stepper */}
+            <div className="flex items-center gap-2 shrink-0">
+              <label className="text-sm text-base-content/70 whitespace-nowrap">ab Stärke</label>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFilter((s) => ({
+                      ...s,
+                      minStrength: Math.max(1, s.minStrength - 1),
+                    }))
+                  }
+                  className="btn btn-sm btn-outline btn-square"
+                >
+                  −
+                </button>
+                <span className="w-8 text-center text-base font-semibold">
+                  {filter.minStrength}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFilter((s) => ({
+                      ...s,
+                      minStrength: Math.min(10, s.minStrength + 1),
+                    }))
+                  }
+                  className="btn btn-sm btn-outline btn-square"
+                >
+                  +
+                </button>
+              </div>
             </div>
           </div>
 
@@ -262,7 +270,6 @@ export default function Games() {
               const phoneForWhatsApp = encodeURIComponent(displayPhone);
               const route = routeHref(g);
 
-              // 🔹 Distanzberechnung
               let distanceText = "";
               if (
                 center &&
