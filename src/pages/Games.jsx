@@ -35,7 +35,6 @@ export default function Games() {
   const [center, setCenter] = useState(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const { location, updateLocation } = useUserLocation(true);
-
   const trainerProfile = JSON.parse(localStorage.getItem("trainerProfile") || "{}");
 
   useEffect(() => {
@@ -148,11 +147,9 @@ export default function Games() {
         <div className="card-body space-y-3">
           <h2 className="card-title text-primary">Spiele suchen</h2>
 
-          {/* Jahrgang + Stärke kompakt nebeneinander (links ausgerichtet) */}
-        <div className="flex items-center justify-start gap-2 flex-wrap sm:flex-nowrap">
           {/* Jahrgang */}
           <select
-            className="select select-bordered flex-[0_0_auto] max-w-[45%] min-w-[130px] text-sm"
+            className="select select-bordered w-full"
             value={filter.ageGroup}
             onChange={(e) => setFilter((s) => ({ ...s, ageGroup: e.target.value }))}
           >
@@ -164,9 +161,9 @@ export default function Games() {
             ))}
           </select>
 
-          {/* Stärke-Stepper */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <label className="text-sm text-base-content/70 whitespace-nowrap">ab</label>
+          {/* Stärke-Stepper über volle Breite */}
+          <div className="w-full flex justify-between items-center">
+            <span className="text-sm text-base-content/70">Mindest-Stärke</span>
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -196,10 +193,7 @@ export default function Games() {
                 +
               </button>
             </div>
-            <span className="text-sm text-base-content/70 whitespace-nowrap">Stärke</span>
           </div>
-        </div>
-
 
           {/* Ort mit kleinem Such-Button */}
           <div className="flex gap-2">
