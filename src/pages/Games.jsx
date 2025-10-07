@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
-import { Mail, MapPin, Navigation, Crosshair, MessageCircle } from "lucide-react";
+import { Mail, MapPin, Navigation, MessageCircle, Search } from "lucide-react";
 import { useUserLocation } from "../hooks/useUserLocation";
 
-// 📅 Datum ins deutsche Format
 function formatDateGerman(dateStr) {
   if (!dateStr) return "";
   const d = new Date(dateStr);
@@ -13,7 +12,6 @@ function formatDateGerman(dateStr) {
     : d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-// 🔢 Distanzberechnung (Haversine)
 const distanceKm = (lat1, lon1, lat2, lon2) => {
   const R = 6371;
   const toRad = (v) => (v * Math.PI) / 180;
@@ -28,15 +26,19 @@ const distanceKm = (lat1, lon1, lat2, lon2) => {
 export default function Games() {
   const [games, setGames] = useState([]);
   const [ageGroups, setAgeGroups] = useState([]);
-  const [filter, setFilter] = useState({ ageGroup: "", radius: 25, locationQuery: "" }); // 🔸 Default 25 km
+  const [filter, setFilter] = useState({
+    ageGroup: "",
+    radius: 25,
+    locationQuery: "",
+    minStrength: 1,
+  });
   const [center, setCenter] = useState(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
-  const { location, isLoading, updateLocation } = useUserLocation(true); // 🔸 AutoStart aktiviert
+  const { location, updateLocation } = useUserLocation(true);
 
-  // 🔹 Trainerprofil (für WhatsApp-Gruß)
   const trainerProfile = JSON.parse(localStorage.getItem("trainerProfile") || "{}");
 
-  // Altersklassen erzeugen
+  // Altersklassen
   useEffect(() => {
     const year = new Date().getFullYear();
     const list = [];
@@ -58,35 +60,17 @@ export default function Games() {
     return () => unsub();
   }, []);
 
-  // 🔸 Standort beim ersten Laden übernehmen
+  // Initialer Standort
   useEffect(() => {
     if (location && !center) {
       setCenter({ lat: location.lat, lng: location.lng, label: "Mein Standort" });
     }
   }, [location]);
 
-  // Falls kein Standort-Cache existiert → automatisch abrufen
-  useEffect(() => {
-    if (!location) updateLocation();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Filterlogik (inkl. Umkreis)
-  const filtered = useMemo(() => {
-    return games.filter((g) => {
-      if (filter.ageGroup && !g.ageGroup?.startsWith(filter.ageGroup)) return false;
-      if (center && typeof g.lat === "number" && typeof g.lng === "number") {
-        const d = distanceKm(center.lat, center.lng, g.lat, g.lng);
-        if (d > filter.radius) return false;
-      } else if (center && (g.lat == null || g.lng == null)) {
-        return false;
-      }
-      return true;
-    });
-  }, [games, filter, center]);
-
-  // 🔎 Ort-Suche
-  const geocode = async (queryStr) => {
-    if (!queryStr?.trim()) return;
+  // 🔍 Geocoding für manuelle Ortssuche
+  const handleSearch = async () => {
+    const queryStr = filter.locationQuery.trim();
+    if (!queryStr) return;
     try {
       setIsGeocoding(true);
       const res = await fetch(
@@ -96,7 +80,11 @@ export default function Games() {
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
         const item = data[0];
-        setCenter({ lat: parseFloat(item.lat), lng: parseFloat(item.lon), label: item.display_name });
+        setCenter({
+          lat: parseFloat(item.lat),
+          lng: parseFloat(item.lon),
+          label: item.display_name,
+        });
       } else {
         alert("Ort nicht gefunden. Bitte präziser eingeben.");
       }
@@ -108,7 +96,32 @@ export default function Games() {
     }
   };
 
-  // 🟢 WhatsApp Nachricht mit persönlichem Gruß
+  const handleReset = () => {
+    setFilter({ ageGroup: "", radius: 25, locationQuery: "", minStrength: 1 });
+    updateLocation();
+    if (location)
+      setCenter({ lat: location.lat, lng: location.lng, label: "Mein Standort" });
+  };
+
+  // 🧮 Filterlogik
+  const filtered = useMemo(() => {
+    return games.filter((g) => {
+      if (filter.ageGroup && !g.ageGroup?.startsWith(filter.ageGroup)) return false;
+
+      const strengthNum = Number(g.strength);
+      if (!isNaN(strengthNum) && strengthNum < filter.minStrength) return false;
+
+      if (center && typeof g.lat === "number" && typeof g.lng === "number") {
+        const d = distanceKm(center.lat, center.lng, g.lat, g.lng);
+        if (d > filter.radius) return false;
+      } else if (center && (g.lat == null || g.lng == null)) {
+        return false;
+      }
+      return true;
+    });
+  }, [games, filter, center]);
+
+  // WhatsApp Nachricht mit Gruß
   const whatsappMessage = (g) => {
     const date = formatDateGerman(g.date);
     let text = `Hallo! Sucht ihr noch einen Gegner für euer Spiel am ${date}? Wir hätten Interesse!`;
@@ -136,13 +149,13 @@ export default function Games() {
     <div className="p-4">
       {/* Filter */}
       <div className="card bg-base-100 shadow-xl mb-6">
-        <div className="card-body">
+        <div className="card-body space-y-3">
           <h2 className="card-title text-primary">Spiele suchen</h2>
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 mt-2">
-            {/* Jahrgang */}
+          {/* Jahrgang + Stärke nebeneinander */}
+          <div className="flex flex-col sm:flex-row gap-3">
             <select
-              className="select select-bordered w-full"
+              className="select select-bordered flex-1"
               value={filter.ageGroup}
               onChange={(e) => setFilter((s) => ({ ...s, ageGroup: e.target.value }))}
             >
@@ -154,27 +167,44 @@ export default function Games() {
               ))}
             </select>
 
-            {/* Standortsuche */}
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-base-content/70">ab</label>
               <input
-                type="text"
-                placeholder="Ort / Adresse für Umkreissuche"
-                className="input input-bordered w-full"
-                value={filter.locationQuery}
-                onChange={(e) => setFilter((s) => ({ ...s, locationQuery: e.target.value }))}
+                type="number"
+                min="1"
+                max="10"
+                value={filter.minStrength}
+                onChange={(e) =>
+                  setFilter((s) => ({ ...s, minStrength: Number(e.target.value) }))
+                }
+                className="input input-bordered w-24 text-center"
               />
-              <button
-                className="btn btn-outline"
-                onClick={() => geocode(filter.locationQuery)}
-                disabled={isGeocoding}
-              >
-                {isGeocoding ? "…" : "Setzen"}
-              </button>
+              <span className="text-sm text-base-content/70">Stärke</span>
             </div>
+          </div>
 
-            {/* Radius */}
+          {/* Ort mit kleinem Such-Button */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Ort / Adresse (optional)"
+              className="input input-bordered w-full"
+              value={filter.locationQuery}
+              onChange={(e) => setFilter((s) => ({ ...s, locationQuery: e.target.value }))}
+            />
+            <button
+              className="btn btn-outline"
+              onClick={handleSearch}
+              disabled={!filter.locationQuery.trim() || isGeocoding}
+            >
+              <Search size={16} />
+            </button>
+          </div>
+
+          {/* Radius + Reset */}
+          <div className="flex flex-col sm:flex-row gap-3">
             <select
-              className="select select-bordered w-full"
+              className="select select-bordered flex-1"
               value={filter.radius}
               onChange={(e) => setFilter((s) => ({ ...s, radius: parseInt(e.target.value) }))}
             >
@@ -185,30 +215,13 @@ export default function Games() {
               ))}
             </select>
 
-            {/* Aktionen */}
-            <div className="flex gap-2">
-              <button
-                className="btn btn-outline"
-                onClick={() => {
-                  setFilter({ ageGroup: "", radius: 25, locationQuery: "" });
-                  updateLocation();
-                }}
-              >
-                Reset
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={updateLocation}
-                disabled={isLoading}
-              >
-                <Crosshair size={16} className="mr-1" />
-                {isLoading ? "Suche…" : "Mein Standort"}
-              </button>
-            </div>
+            <button className="btn btn-outline flex-1 sm:flex-none" onClick={handleReset}>
+              Reset
+            </button>
           </div>
 
           {center && (
-            <div className="text-xs text-base-content/60 mt-2">
+            <div className="text-xs text-base-content/60 mt-1">
               Zentrum: <span className="text-base-content">{center.label}</span> • Radius:{" "}
               {filter.radius} km
             </div>
@@ -216,7 +229,7 @@ export default function Games() {
         </div>
       </div>
 
-      {/* Liste */}
+      {/* Ergebnisse */}
       <div className="card bg-base-100 shadow-xl">
         <div className="card-body">
           <div className="flex items-center justify-between mb-3">
@@ -229,9 +242,7 @@ export default function Games() {
           </div>
 
           {filtered.length === 0 && (
-            <p className="text-sm text-neutral-500">
-              Keine Spiele im Umkreis gefunden.
-            </p>
+            <p className="text-sm text-neutral-500">Keine Spiele gefunden.</p>
           )}
 
           <ul className="divide-y divide-base-200">
@@ -245,11 +256,19 @@ export default function Games() {
               const route = routeHref(g);
 
               return (
-                <li key={g.id} className="py-4 flex flex-col sm:flex-row sm:justify-between gap-2">
+                <li
+                  key={g.id}
+                  className="py-4 flex flex-col sm:flex-row sm:justify-between gap-2"
+                >
                   <div>
                     <div className="font-semibold">
                       {formatDateGerman(g.date)} {g.time && `• ${g.time}`}{" "}
-                      {g.ageGroup && `• ${g.ageGroup}`}
+                      {g.ageGroup && `• ${g.ageGroup}`}{" "}
+                      {g.strength && (
+                        <span className="text-xs text-primary ml-1">
+                          💪 Stärke: {g.strength}
+                        </span>
+                      )}
                     </div>
                     <div className="text-sm text-base-content/80">
                       {g.ownerClub && <span>{g.ownerClub}</span>}
@@ -281,7 +300,12 @@ export default function Games() {
                       </a>
                     )}
                     {route && (
-                      <a href={route} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline">
+                      <a
+                        href={route}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn btn-sm btn-outline"
+                      >
                         <Navigation size={16} />
                       </a>
                     )}
