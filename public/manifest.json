@@ -1,12 +1,8 @@
 {
-  "id": "/",
-  "name": "MatchBuddy",
-  "short_name": "MatchBuddy",
-  "description": "MatchBuddy hilft Trainerinnen und Trainern, Spiele und Teams zu organisieren.",
-  "start_url": "/?source=pwa",
-  "scope": "/",
+  "name": "Matchbuddy",
+  "short_name": "Matchbuddy",
+  "start_url": "/",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#ffffff",
   "theme_color": "#00B86B",
   "icons": [
@@ -19,12 +15,6 @@
       "src": "/favicon.png",
       "sizes": "512x512",
       "type": "image/png"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "MatchBuddy öffnen",
-      "url": "/?source=shortcut"
     }
   ]
 }
