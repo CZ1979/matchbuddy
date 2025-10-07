@@ -54,6 +54,14 @@ export default function Layout() {
       {/* FOOTER */}
       <footer className="bg-base-100 border-t border-base-300 py-4 text-center text-sm text-base-content/70">
         <p>© {new Date().getFullYear()} MatchBuddy – Entwickelt für Trainerinnen und Trainer 💚</p>
+         <a
+    href="/privacy.html"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="hover:underline"
+  >
+    Datenschutzerklärung
+  </a>
       </footer>
     </div>
   );
