@@ -211,17 +211,24 @@ export default function NewGame() {
           )}
 
           <div className="grid grid-cols-1 gap-3">
+            {/* Datum */}
+            <label className="text-sm font-medium">Datum</label>
             <input
               type="date"
               className="input input-bordered w-full"
               value={newGame.date}
               onChange={(e) => setNewGame((s) => ({ ...s, date: e.target.value }))}
+              placeholder="Datum wählen"
             />
+
+            {/* Uhrzeit */}
+            <label className="text-sm font-medium">Uhrzeit</label>
             <input
               type="time"
               className="input input-bordered w-full"
               value={newGame.time}
               onChange={(e) => setNewGame((s) => ({ ...s, time: e.target.value }))}
+              placeholder="Uhrzeit wählen"
             />
 
             {/* Altersklasse */}
