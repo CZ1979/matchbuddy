@@ -1,11 +1,14 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import logo from "../assets/logo.svg"; // ← Pfad prüfen
-
 import ThemeToggle from "./ThemeToggle";
 import BottomNav from "./BottomNav";
+import { useState } from "react";
+import FeedbackModal from "./FeedbackModal";
+
 
 export default function Layout() {
   const location = useLocation();
+  const [isFeedbackOpen, setFeedbackOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-base-200 text-base-content flex flex-col">
@@ -52,13 +55,37 @@ export default function Layout() {
 
     
 
-      {/* FOOTER – sitzt bewusst über der fixen BottomNav */}
-        <footer className="bg-base-100 border-t border-base-300 py-4 text-center text-sm text-base-content/70 mb-[calc(env(safe-area-inset-bottom)+4rem)] sm:mb-0">
-        <p>© {new Date().getFullYear()} MatchBuddy – Entwickelt für Trainerinnen und Trainer 💚</p>
-        <a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="hover:underline">
-          Datenschutzerklärung
-        </a>
-      </footer>
+     {/* FOOTER – sitzt bewusst über der fixen BottomNav */}
+<footer className="bg-base-100 border-t border-base-300 py-4 text-center text-sm text-base-content/70 mb-[calc(env(safe-area-inset-bottom)+4rem)] sm:mb-0">
+  <p>© {new Date().getFullYear()} MatchBuddy – Entwickelt für Trainerinnen und Trainer 💚</p>
+  <div className="flex justify-center gap-4 mt-1">
+    <a
+      href="/privacy.html"
+      rel="noopener noreferrer"
+      className="hover:underline"
+    >
+      Datenschutzerklärung
+    </a>
+    |
+    <a
+  href="#feedback"
+  onClick={(e) => {
+    e.preventDefault();
+    setFeedbackOpen(true);
+  }}
+  className="hover:underline cursor-pointer"
+>
+  Feedback
+</a>
+  </div>
+</footer>
+
+{/* Feedback Modal */}
+<FeedbackModal
+  isOpen={isFeedbackOpen}
+  onClose={() => setFeedbackOpen(false)}
+/>
+
 
       <BottomNav />
 
