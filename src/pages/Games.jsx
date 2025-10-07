@@ -121,6 +121,18 @@ export default function Games() {
     });
   }, [games, filter, center]);
 
+  // ✅ Google Maps Link bevorzugt Adresse, fallback auf Koordinaten
+  const routeHref = (g) => {
+    const destination = [g.address, g.zip, g.city].filter(Boolean).join(", ");
+    if (destination) {
+      return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+    }
+    if (typeof g.lat === "number" && typeof g.lng === "number") {
+      return `https://www.google.com/maps/dir/?api=1&destination=${g.lat},${g.lng}`;
+    }
+    return null;
+  };
+
   // WhatsApp Nachricht mit Gruß
   const whatsappMessage = (g) => {
     const date = formatDateGerman(g.date);
@@ -139,11 +151,6 @@ export default function Games() {
 
     return encodeURIComponent(text);
   };
-
-  const routeHref = (g) =>
-    typeof g.lat === "number" && typeof g.lng === "number"
-      ? `https://www.google.com/maps/dir/?api=1&destination=${g.lat},${g.lng}`
-      : null;
 
   return (
     <div className="p-4">
@@ -255,6 +262,18 @@ export default function Games() {
               const phoneForWhatsApp = encodeURIComponent(displayPhone);
               const route = routeHref(g);
 
+              // 🔹 Distanzberechnung
+              let distanceText = "";
+              if (
+                center &&
+                typeof g.lat === "number" &&
+                typeof g.lng === "number" &&
+                typeof center.lat === "number"
+              ) {
+                const dist = distanceKm(center.lat, center.lng, g.lat, g.lng);
+                distanceText = `~${Math.round(dist)} km entfernt`;
+              }
+
               return (
                 <li
                   key={g.id}
@@ -274,10 +293,18 @@ export default function Games() {
                       {g.ownerClub && <span>{g.ownerClub}</span>}
                       {g.ownerName && <span> — {g.ownerName}</span>}
                     </div>
+
                     {(g.address || g.city || g.zip) && (
-                      <div className="text-xs text-neutral-500 mt-1 flex items-center gap-1">
-                        <MapPin size={14} className="text-primary" />
-                        {[g.address, g.zip, g.city].filter(Boolean).join(", ")}
+                      <div className="text-xs text-neutral-500 mt-1 flex flex-col sm:flex-row sm:items-center gap-1">
+                        <div className="flex items-center gap-1">
+                          <MapPin size={14} className="text-primary" />
+                          {[g.address, g.zip, g.city].filter(Boolean).join(", ")}
+                        </div>
+                        {distanceText && (
+                          <span className="text-xs text-neutral-500 sm:ml-2">
+                            📍 {distanceText}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
