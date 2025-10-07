@@ -11,6 +11,7 @@ export default function Layout() {
     <div className="min-h-screen bg-base-200 text-base-content flex flex-col">
       {/* HEADER */}
       <header className="navbar bg-base-100 shadow-md sticky top-0 z-40">
+
         <div className="flex-1 px-4 font-heading text-xl text-primary">
          <Link to="/" className="flex items-center gap-2">
         <img src={logo} alt="MatchBuddy" className="h-32 cursor-pointer" />

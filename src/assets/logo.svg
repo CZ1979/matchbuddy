@@ -7,20 +7,8 @@
       <stop offset="100%" stop-color="#00985A"/>
     </linearGradient>
   </defs>
-
-  <!-- Icon links 
-  <g transform="translate(12,12)">
-    <circle cx="78" cy="78" r="60" fill="url(#gH)"/>
-    <path d="M72 132c-12 12-27 19-40 22 9-7 13-16 15-26" fill="#00B86B" opacity="0.95"/>
-    <g fill="none" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" opacity="0.9">
-      <path d="M36 78c12-16 33-26 42-26s30 10 42 26"/>
-      <path d="M50 102c14 10 27 13 28 13s14-3 28-13"/>
-    </g>
-    <circle cx="78" cy="78" r="4.5" fill="#FFFFFF" opacity="0.9"/>
-  </g>
-  -->
   <!-- Wortmarke rechts -->
-  <g transform="translate(170,50)">
+  <g transform="translate(50,50)">
     <text x="0" y="40" font-family="Poppins, Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" font-size="44" font-weight="700" fill="#101820" letter-spacing="0.2">
       Match<tspan fill="#00B86B">Buddy</tspan>
     </text>
