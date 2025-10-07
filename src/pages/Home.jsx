@@ -1,16 +1,28 @@
 import { User, Trophy, MapPin } from "lucide-react";
+import { useUserLocation } from "../hooks/useUserLocation";
 
 export default function Home() {
+  const { location, isLoading, updateLocation } = useUserLocation(true);
+
   return (
     <div className="p-4 max-w-6xl mx-auto w-full space-y-6">
       <section className="bg-base-100 rounded-2xl shadow p-8 text-center">
-        <h1 className="text-4xl font-heading text-primary">
-          Find your Match!
-        </h1>
+        <h1 className="text-4xl font-heading text-primary">Find your Match!</h1>
         <p className="py-4 text-base-content/70">
-          Du suchst nach Gegnern für Freundschaftsspiele - ohne WhatsApp-Chaos?<br></br>
+          Du suchst nach Gegnern für Freundschaftsspiele – ohne WhatsApp-Chaos?
+          <br />
           Hier bist Du richtig!
         </p>
+        {isLoading && (
+          <p className="text-xs text-neutral-500">📍 Standort wird geladen…</p>
+        )}
+        {location && (
+          <p className="text-xs text-neutral-500">
+            📍 Standort aktiv (ca.{" "}
+            {Math.round(location.lat * 100) / 100},{" "}
+            {Math.round(location.lng * 100) / 100})
+          </p>
+        )}
       </section>
 
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -20,7 +32,9 @@ export default function Home() {
         >
           <User className="text-primary mx-auto" size={40} />
           <h2 className="text-lg font-semibold mt-3">Mein Profil</h2>
-          <p className="text-base-content/70 mb-3">Trainerprofil mit Verein & Kontakt</p>
+          <p className="text-base-content/70 mb-3">
+            Trainerprofil mit Verein & Kontakt
+          </p>
           <button className="btn btn-primary">Öffnen</button>
         </a>
 
@@ -30,7 +44,9 @@ export default function Home() {
         >
           <Trophy className="text-primary mx-auto" size={40} />
           <h2 className="text-lg font-semibold mt-3">Meine Spiele</h2>
-          <p className="text-base-content/70 mb-3">Spiele anlegen und verwalten</p>
+          <p className="text-base-content/70 mb-3">
+            Spiele anlegen und verwalten
+          </p>
           <button className="btn btn-primary">Öffnen</button>
         </a>
 

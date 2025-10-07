@@ -1,18 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
-import { Mail, MapPin, Star, Navigation, Crosshair, MessageCircle } from "lucide-react";
+import { Mail, MapPin, Navigation, Crosshair, MessageCircle } from "lucide-react";
+import { useUserLocation } from "../hooks/useUserLocation";
 
 // 📅 Datum ins deutsche Format
 function formatDateGerman(dateStr) {
   if (!dateStr) return "";
   const d = new Date(dateStr);
-  if (isNaN(d)) return dateStr;
-  return d.toLocaleDateString("de-DE", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  return isNaN(d)
+    ? dateStr
+    : d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 // 🔢 Distanzberechnung (Haversine)
@@ -30,51 +28,52 @@ const distanceKm = (lat1, lon1, lat2, lon2) => {
 export default function Games() {
   const [games, setGames] = useState([]);
   const [ageGroups, setAgeGroups] = useState([]);
-  const [filter, setFilter] = useState({
-    ageGroup: "",
-    radius: 50,
-    locationQuery: "",
-  });
+  const [filter, setFilter] = useState({ ageGroup: "", radius: 25, locationQuery: "" }); // 🔸 Default 25 km
   const [center, setCenter] = useState(null);
-  const [isLocating, setIsLocating] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const { location, isLoading, updateLocation } = useUserLocation(true); // 🔸 AutoStart aktiviert
 
-  // 🧮 Jahrgänge U6–U21 (Dropdown mit Label + Value)
+  // 🔹 Trainerprofil (für WhatsApp-Gruß)
+  const trainerProfile = JSON.parse(localStorage.getItem("trainerProfile") || "{}");
+
+  // Altersklassen erzeugen
   useEffect(() => {
     const year = new Date().getFullYear();
     const list = [];
-    for (let u = 6; u <= 21; u++) {
-      const birthYear = year - u;
-      list.push({ label: `U${u} / ${birthYear}`, value: `U${u}` });
-    }
+    for (let u = 6; u <= 21; u++) list.push({ label: `U${u} / ${year - u}`, value: `U${u}` });
     setAgeGroups(list);
   }, []);
 
-  // 🔥 Firestore Live Sync
+  // Firestore Sync
   useEffect(() => {
     const q = query(collection(db, "games"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, (snap) => {
       const list = [];
       snap.forEach((doc) => list.push({ id: doc.id, ...doc.data() }));
-
-      // Nur zukünftige Spiele
       const today = new Date().toISOString().split("T")[0];
       const upcoming = list.filter((g) => g.date && g.date >= today);
-
-      // Nach Datum aufsteigend sortieren
       upcoming.sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0));
       setGames(upcoming);
     });
     return () => unsub();
   }, []);
 
-  // 🧭 Filter (Jahrgang + Radius)
+  // 🔸 Standort beim ersten Laden übernehmen
+  useEffect(() => {
+    if (location && !center) {
+      setCenter({ lat: location.lat, lng: location.lng, label: "Mein Standort" });
+    }
+  }, [location]);
+
+  // Falls kein Standort-Cache existiert → automatisch abrufen
+  useEffect(() => {
+    if (!location) updateLocation();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Filterlogik (inkl. Umkreis)
   const filtered = useMemo(() => {
     return games.filter((g) => {
-      // Jahrgang: nur nach dem ersten Teil (U11 etc.) vergleichen
       if (filter.ageGroup && !g.ageGroup?.startsWith(filter.ageGroup)) return false;
-
-      // Radiusfilter
       if (center && typeof g.lat === "number" && typeof g.lng === "number") {
         const d = distanceKm(center.lat, center.lng, g.lat, g.lng);
         if (d > filter.radius) return false;
@@ -85,7 +84,7 @@ export default function Games() {
     });
   }, [games, filter, center]);
 
-  // 📍 Geocoding
+  // 🔎 Ort-Suche
   const geocode = async (queryStr) => {
     if (!queryStr?.trim()) return;
     try {
@@ -97,11 +96,7 @@ export default function Games() {
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
         const item = data[0];
-        setCenter({
-          lat: parseFloat(item.lat),
-          lng: parseFloat(item.lon),
-          label: item.display_name,
-        });
+        setCenter({ lat: parseFloat(item.lat), lng: parseFloat(item.lon), label: item.display_name });
       } else {
         alert("Ort nicht gefunden. Bitte präziser eingeben.");
       }
@@ -113,65 +108,29 @@ export default function Games() {
     }
   };
 
-  // 📍 Mein Standort
-  const useMyLocation = () => {
-    if (!navigator.geolocation) {
-      alert("Geolocation wird nicht unterstützt.");
-      return;
-    }
-    setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setCenter({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          label: "Mein Standort",
-        });
-        setIsLocating(false);
-      },
-      (err) => {
-        console.warn(err);
-        alert("Standort konnte nicht ermittelt werden.");
-        setIsLocating(false);
-      }
-    );
-  };
-
-  // 🌟 Stärke
-  const renderStrength = (level) => {
-    const l = parseInt(level || 0, 10);
-    return (
-      <div className="flex gap-0.5 mt-1">
-        {[...Array(10)].map((_, i) => (
-          <Star
-            key={i}
-            size={14}
-            className={i + 1 <= l ? "text-yellow-500 fill-yellow-500" : "text-base-300"}
-          />
-        ))}
-      </div>
-    );
-  };
-
-  // 🗺️ Google Maps Route-Link
-  const routeHref = (g) => {
-    if (typeof g.lat === "number" && typeof g.lng === "number") {
-      return `https://www.google.com/maps/dir/?api=1&destination=${g.lat},${g.lng}`;
-    }
-    const parts = [g.address, g.zip, g.city].filter(Boolean).join(", ");
-    if (parts) {
-      return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(parts)}`;
-    }
-    return null;
-  };
-
-  // 📱 WhatsApp Nachricht
+  // 🟢 WhatsApp Nachricht mit persönlichem Gruß
   const whatsappMessage = (g) => {
     const date = formatDateGerman(g.date);
-    return encodeURIComponent(
-      `Hallo! Sucht ihr noch einen Gegner für euer Spiel am ${date}? Wir hätten Interesse!`
-    );
+    let text = `Hallo! Sucht ihr noch einen Gegner für euer Spiel am ${date}? Wir hätten Interesse!`;
+
+    const first = trainerProfile.firstName || "";
+    const last = trainerProfile.lastName || "";
+    const club = trainerProfile.club || "";
+
+    const namePart = [first, last].filter(Boolean).join(" ");
+    if (namePart || club) {
+      text += `\n\nViele Grüße`;
+      if (namePart) text += `,\n${namePart}`;
+      if (club) text += `\n${club}`;
+    }
+
+    return encodeURIComponent(text);
   };
+
+  const routeHref = (g) =>
+    typeof g.lat === "number" && typeof g.lng === "number"
+      ? `https://www.google.com/maps/dir/?api=1&destination=${g.lat},${g.lng}`
+      : null;
 
   return (
     <div className="p-4">
@@ -195,7 +154,7 @@ export default function Games() {
               ))}
             </select>
 
-            {/* Standort */}
+            {/* Standortsuche */}
             <div className="flex gap-2">
               <input
                 type="text"
@@ -231,15 +190,19 @@ export default function Games() {
               <button
                 className="btn btn-outline"
                 onClick={() => {
-                  setFilter({ ageGroup: "", radius: 50, locationQuery: "" });
-                  setCenter(null);
+                  setFilter({ ageGroup: "", radius: 25, locationQuery: "" });
+                  updateLocation();
                 }}
               >
                 Reset
               </button>
-              <button className="btn btn-primary" onClick={useMyLocation} disabled={isLocating}>
+              <button
+                className="btn btn-primary"
+                onClick={updateLocation}
+                disabled={isLoading}
+              >
                 <Crosshair size={16} className="mr-1" />
-                {isLocating ? "Suche…" : "Mein Standort"}
+                {isLoading ? "Suche…" : "Mein Standort"}
               </button>
             </div>
           </div>
@@ -253,91 +216,75 @@ export default function Games() {
         </div>
       </div>
 
-      {/* Spieleliste */}
+      {/* Liste */}
       <div className="card bg-base-100 shadow-xl">
         <div className="card-body">
-          <h2 className="card-title text-primary mb-3">Gefundene Spiele</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="card-title text-primary">Gefundene Spiele</h2>
+            <span className="text-sm text-base-content/70">
+              {filtered.length === 1
+                ? "1 Spiel gefunden"
+                : `${filtered.length} Spiele gefunden`}
+            </span>
+          </div>
 
           {filtered.length === 0 && (
-            <p className="text-sm text-neutral-500">Keine Spiele gefunden.</p>
+            <p className="text-sm text-neutral-500">
+              Keine Spiele im Umkreis gefunden.
+            </p>
           )}
 
           <ul className="divide-y divide-base-200">
             {filtered.map((g) => {
-              const route = routeHref(g);
-
-              // Telefonnummer normalisieren für Anzeige
-              let phoneRaw = (g.contactPhone || "").trim();
+              const phoneRaw = (g.contactPhone || "").trim();
               let displayPhone = phoneRaw;
               if (displayPhone.startsWith("0049")) displayPhone = "+" + displayPhone.slice(2);
               else if (displayPhone.startsWith("0")) displayPhone = "+49" + displayPhone.slice(1);
               else if (!displayPhone.startsWith("+")) displayPhone = "+" + displayPhone;
-
-              // Für WhatsApp-Link: + MUSS mit in die URL → encoden!
-              // Beispiel: https://wa.me/%2B491761234567?text=...
               const phoneForWhatsApp = encodeURIComponent(displayPhone);
+              const route = routeHref(g);
 
               return (
-                <li key={g.id} className="py-4">
-                  <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
-                    <div>
-                      <div className="font-semibold">
-                        {formatDateGerman(g.date)} {g.time && `• ${g.time}`}{" "}
-                        {g.ageGroup && `• ${g.ageGroup}`}
-                      </div>
-
-                      <div className="text-sm text-base-content/80">
-                        {g.ownerClub && <span>{g.ownerClub}</span>}
-                        {g.ownerName && <span> — {g.ownerName}</span>}
-                      </div>
-
-                      {g.notes && (
-                        <div className="text-sm italic text-neutral-600 mt-1">{g.notes}</div>
-                      )}
-
-                      {(g.address || g.city || g.zip) && (
-                        <div className="text-xs text-neutral-500 mt-1 flex items-center gap-1">
-                          <MapPin size={14} className="text-primary" />
-                          {[g.address, g.zip, g.city].filter(Boolean).join(", ")}
-                        </div>
-                      )}
-
-                      {renderStrength(g.strength)}
+                <li key={g.id} className="py-4 flex flex-col sm:flex-row sm:justify-between gap-2">
+                  <div>
+                    <div className="font-semibold">
+                      {formatDateGerman(g.date)} {g.time && `• ${g.time}`}{" "}
+                      {g.ageGroup && `• ${g.ageGroup}`}
                     </div>
-
-                    <div className="flex flex-row gap-2 items-start sm:mt-0">
-                      {g.contactEmail && (
-                        <a
-                          href={`mailto:${g.contactEmail}`}
-                          className="btn btn-sm btn-primary"
-                          title="E-Mail schreiben"
-                        >
-                          <Mail size={16} />
-                        </a>
-                      )}
-                      {phoneRaw && (
-                        <a
-                          href={`https://wa.me/${phoneForWhatsApp}?text=${whatsappMessage(g)}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="btn btn-sm btn-success"
-                          title={`WhatsApp öffnen (${displayPhone})`}
-                        >
-                          <MessageCircle size={16} />
-                        </a>
-                      )}
-                      {route && (
-                        <a
-                          href={route}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="btn btn-sm btn-outline"
-                          title="Route in Google Maps öffnen"
-                        >
-                          <Navigation size={16} />
-                        </a>
-                      )}
+                    <div className="text-sm text-base-content/80">
+                      {g.ownerClub && <span>{g.ownerClub}</span>}
+                      {g.ownerName && <span> — {g.ownerName}</span>}
                     </div>
+                    {(g.address || g.city || g.zip) && (
+                      <div className="text-xs text-neutral-500 mt-1 flex items-center gap-1">
+                        <MapPin size={14} className="text-primary" />
+                        {[g.address, g.zip, g.city].filter(Boolean).join(", ")}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-row gap-2 items-start sm:mt-0">
+                    {g.contactEmail && (
+                      <a href={`mailto:${g.contactEmail}`} className="btn btn-sm btn-primary">
+                        <Mail size={16} />
+                      </a>
+                    )}
+                    {phoneRaw && (
+                      <a
+                        href={`https://wa.me/${phoneForWhatsApp}?text=${whatsappMessage(g)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn btn-sm btn-success"
+                        title={`WhatsApp öffnen (${displayPhone})`}
+                      >
+                        <MessageCircle size={16} />
+                      </a>
+                    )}
+                    {route && (
+                      <a href={route} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline">
+                        <Navigation size={16} />
+                      </a>
+                    )}
                   </div>
                 </li>
               );

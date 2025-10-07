@@ -10,6 +10,7 @@ import {
   doc,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { useUserLocation } from "../hooks/useUserLocation";
 
 // 📅 Hilfsfunktion für deutsches Datum
 function formatDateGerman(dateStr) {
@@ -44,8 +45,10 @@ export default function NewGame() {
   const [successMsg, setSuccessMsg] = useState("");
   const [myGames, setMyGames] = useState([]);
 
-  // 🧠 Altersklassen Dropdown (U6–U21)
   const [ageGroups, setAgeGroups] = useState([]);
+  const { location, updateLocation, isLoading } = useUserLocation();
+
+  // 🧠 Altersklassen Dropdown (U6–U21)
   useEffect(() => {
     const year = new Date().getFullYear();
     const list = [];
@@ -62,38 +65,39 @@ export default function NewGame() {
     localStorage.setItem("newGameDefaults", JSON.stringify(rest));
   }, [newGame]);
 
-  // 📍 Reverse Geocoding via Nominatim
+  // 📍 Reverse Geocoding via Nominatim + Standortintegration
   const fillWithMyLocation = async () => {
-    if (!navigator.geolocation) return alert("Geolocation wird nicht unterstützt");
+    if (!location) {
+      updateLocation();
+      alert("📍 Standort wird ermittelt… bitte kurz warten.");
+      return;
+    }
 
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-      setNewGame((s) => ({ ...s, lat, lng }));
+    const { lat, lng } = location;
+    setNewGame((s) => ({ ...s, lat, lng }));
 
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`
-        );
-        const data = await res.json();
-        if (data.address) {
-          setNewGame((s) => ({
-            ...s,
-            address:
-              (data.address.road || "") +
-              (data.address.house_number ? " " + data.address.house_number : ""),
-            zip: data.address.postcode || "",
-            city:
-              data.address.city ||
-              data.address.town ||
-              data.address.village ||
-              "",
-          }));
-        }
-      } catch (err) {
-        console.error("Reverse geocoding failed:", err);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`
+      );
+      const data = await res.json();
+      if (data.address) {
+        setNewGame((s) => ({
+          ...s,
+          address:
+            (data.address.road || "") +
+            (data.address.house_number ? " " + data.address.house_number : ""),
+          zip: data.address.postcode || "",
+          city:
+            data.address.city ||
+            data.address.town ||
+            data.address.village ||
+            "",
+        }));
       }
-    });
+    } catch (err) {
+      console.error("Reverse geocoding failed:", err);
+    }
   };
 
   // 🆕 Forward Geocoding für Adresse beim Speichern
@@ -177,7 +181,6 @@ export default function NewGame() {
     const unsub = onSnapshot(q, (snap) => {
       const list = [];
       snap.forEach((d) => list.push({ id: d.id, ...d.data() }));
-      // nach Datum sortieren
       list.sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0));
       setMyGames(list);
     });
@@ -239,9 +242,7 @@ export default function NewGame() {
             <select
               className="select select-bordered w-full"
               value={newGame.strength}
-              onChange={(e) =>
-                setNewGame((s) => ({ ...s, strength: e.target.value }))
-              }
+              onChange={(e) => setNewGame((s) => ({ ...s, strength: e.target.value }))}
             >
               <option value="">Spielstärke (1–10)</option>
               {[...Array(10)].map((_, i) => (
@@ -255,9 +256,7 @@ export default function NewGame() {
             <select
               className="select select-bordered w-full"
               value={newGame.locationType}
-              onChange={(e) =>
-                setNewGame((s) => ({ ...s, locationType: e.target.value }))
-              }
+              onChange={(e) => setNewGame((s) => ({ ...s, locationType: e.target.value }))}
             >
               <option value="home">Zuhause</option>
               <option value="away">Auswärts</option>
@@ -272,9 +271,7 @@ export default function NewGame() {
                   placeholder="Straße und Hausnummer"
                   className="input input-bordered w-full"
                   value={newGame.address}
-                  onChange={(e) =>
-                    setNewGame((s) => ({ ...s, address: e.target.value }))
-                  }
+                  onChange={(e) => setNewGame((s) => ({ ...s, address: e.target.value }))}
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <input
@@ -282,26 +279,23 @@ export default function NewGame() {
                     placeholder="PLZ"
                     className="input input-bordered w-full"
                     value={newGame.zip}
-                    onChange={(e) =>
-                      setNewGame((s) => ({ ...s, zip: e.target.value }))
-                    }
+                    onChange={(e) => setNewGame((s) => ({ ...s, zip: e.target.value }))}
                   />
                   <input
                     type="text"
                     placeholder="Ort"
                     className="input input-bordered w-full"
                     value={newGame.city}
-                    onChange={(e) =>
-                      setNewGame((s) => ({ ...s, city: e.target.value }))
-                    }
+                    onChange={(e) => setNewGame((s) => ({ ...s, city: e.target.value }))}
                   />
                 </div>
                 <button
                   type="button"
                   className="btn btn-outline w-full"
                   onClick={fillWithMyLocation}
+                  disabled={isLoading}
                 >
-                  📍 Meine Position verwenden
+                  {isLoading ? "📍 Standort wird gesucht…" : "📍 Meine Position verwenden"}
                 </button>
               </>
             )}
@@ -312,9 +306,7 @@ export default function NewGame() {
               className="textarea textarea-bordered w-full"
               rows={3}
               value={newGame.notes}
-              onChange={(e) =>
-                setNewGame((s) => ({ ...s, notes: e.target.value }))
-              }
+              onChange={(e) => setNewGame((s) => ({ ...s, notes: e.target.value }))}
             />
 
             <button
@@ -341,14 +333,18 @@ export default function NewGame() {
 
           <ul className="divide-y divide-base-200">
             {myGames.map((g) => (
-              <li key={g.id} className="py-3 flex flex-col sm:flex-row sm:justify-between gap-2">
+              <li
+                key={g.id}
+                className="py-3 flex flex-col sm:flex-row sm:justify-between gap-2"
+              >
                 <div>
                   <div className="font-medium">
                     {formatDateGerman(g.date)} {g.time && `• ${g.time}`}{" "}
                     {g.ageGroup && `• ${g.ageGroup}`}
                   </div>
                   <div className="text-sm text-base-content/70">
-                    {g.ownerClub && `${g.ownerClub} — `}{g.ownerName}
+                    {g.ownerClub && `${g.ownerClub} — `}
+                    {g.ownerName}
                   </div>
                   {g.address && (
                     <div className="text-xs text-neutral-500">
