@@ -1,10 +1,9 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import logo from "../assets/logo.svg"; // ← Pfad prüfen
-import ThemeToggle from "./ThemeToggle";
 import BottomNav from "./BottomNav";
 import { useState } from "react";
 import FeedbackModal from "./FeedbackModal";
-
+import PwaInstallPrompt from "./PwaInstallPrompt";
 
 export default function Layout() {
   const location = useLocation();
@@ -14,12 +13,10 @@ export default function Layout() {
     <div className="min-h-screen bg-base-200 text-base-content flex flex-col">
       {/* HEADER */}
       <header className="navbar bg-base-100 shadow-md sticky top-0 z-40">
-
         <div className="flex-1 px-4 font-heading text-xl text-primary">
-         <Link to="/" className="flex items-center gap-2">
-        <img src={logo} alt="MatchBuddy" className="h-32 cursor-pointer" />
-      </Link>
-          
+          <Link to="/" className="flex items-center gap-2">
+            <img src={logo} alt="MatchBuddy" className="h-32 cursor-pointer" />
+          </Link>
         </div>
 
         <nav className="hidden sm:flex gap-2 mr-4">
@@ -27,23 +24,19 @@ export default function Layout() {
             { path: "/", label: "Start" },
             { path: "/profil", label: "Profil" },
             { path: "/neues-spiel", label: "Meine Spiele" },
-            { path: "/spiele", label: "Spiele" },                        
+            { path: "/spiele", label: "Spiele" },
           ].map(({ path, label }) => (
             <Link
               key={path}
               to={path}
               className={`btn btn-ghost btn-sm text-sm ${
-                location.pathname === path
-                  ? "btn-active text-primary font-semibold"
-                  : ""
+                location.pathname === path ? "btn-active text-primary font-semibold" : ""
               }`}
             >
               {label}
             </Link>
           ))}
         </nav>
-
-        
       </header>
 
       {/* ZENTRALER CONTAINER */}
@@ -53,43 +46,32 @@ export default function Layout() {
         </div>
       </main>
 
-    
+      {/* FOOTER – sitzt bewusst über der fixen BottomNav */}
+      <footer className="bg-base-100 border-t border-base-300 py-4 text-center text-sm text-base-content/70 mb-[calc(env(safe-area-inset-bottom)+4rem)] sm:mb-0">
+        <p>© {new Date().getFullYear()} MatchBuddy – Entwickelt für Trainerinnen und Trainer 💚</p>
+        <div className="flex justify-center gap-4 mt-1">
+          <a href="/privacy.html" rel="noopener noreferrer" className="hover:underline">
+            Datenschutzerklärung
+          </a>
+          |
+          <a
+            href="#feedback"
+            onClick={(e) => {
+              e.preventDefault();
+              setFeedbackOpen(true);
+            }}
+            className="hover:underline cursor-pointer"
+          >
+            Feedback
+          </a>
+        </div>
+      </footer>
 
-     {/* FOOTER – sitzt bewusst über der fixen BottomNav */}
-<footer className="bg-base-100 border-t border-base-300 py-4 text-center text-sm text-base-content/70 mb-[calc(env(safe-area-inset-bottom)+4rem)] sm:mb-0">
-  <p>© {new Date().getFullYear()} MatchBuddy – Entwickelt für Trainerinnen und Trainer 💚</p>
-  <div className="flex justify-center gap-4 mt-1">
-    <a
-      href="/privacy.html"
-      rel="noopener noreferrer"
-      className="hover:underline"
-    >
-      Datenschutzerklärung
-    </a>
-    |
-    <a
-  href="#feedback"
-  onClick={(e) => {
-    e.preventDefault();
-    setFeedbackOpen(true);
-  }}
-  className="hover:underline cursor-pointer"
->
-  Feedback
-</a>
-  </div>
-</footer>
+      {/* Feedback Modal */}
+      <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setFeedbackOpen(false)} />
 
-{/* Feedback Modal */}
-<FeedbackModal
-  isOpen={isFeedbackOpen}
-  onClose={() => setFeedbackOpen(false)}
-/>
-
-
+      <PwaInstallPrompt />
       <BottomNav />
-
-
     </div>
   );
 }
