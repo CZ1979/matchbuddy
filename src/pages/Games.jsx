@@ -149,54 +149,57 @@ export default function Games() {
           <h2 className="card-title text-primary">Spiele suchen</h2>
 
           {/* Jahrgang + Stärke kompakt nebeneinander (links ausgerichtet) */}
-          <div className="flex flex-wrap items-center gap-3 justify-start">
-            <select
-              className="select select-bordered w-auto min-w-[150px] sm:min-w-[160px] max-w-[180px]"
-              value={filter.ageGroup}
-              onChange={(e) => setFilter((s) => ({ ...s, ageGroup: e.target.value }))}
-            >
-              <option value="">Alle Jahrgänge</option>
-              {ageGroups.map((a) => (
-                <option key={a.value} value={a.value}>
-                  {a.label}
-                </option>
-              ))}
-            </select>
+        <div className="flex items-center justify-start gap-2 flex-wrap sm:flex-nowrap">
+          {/* Jahrgang */}
+          <select
+            className="select select-bordered flex-[0_0_auto] max-w-[45%] min-w-[130px] text-sm"
+            value={filter.ageGroup}
+            onChange={(e) => setFilter((s) => ({ ...s, ageGroup: e.target.value }))}
+          >
+            <option value="">Alle Jahrgänge</option>
+            {ageGroups.map((a) => (
+              <option key={a.value} value={a.value}>
+                {a.label}
+              </option>
+            ))}
+          </select>
 
-            {/* Stärke-Stepper */}
-            <div className="flex items-center gap-2 shrink-0">
-              <label className="text-sm text-base-content/70 whitespace-nowrap">ab Stärke</label>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setFilter((s) => ({
-                      ...s,
-                      minStrength: Math.max(1, s.minStrength - 1),
-                    }))
-                  }
-                  className="btn btn-sm btn-outline btn-square"
-                >
-                  −
-                </button>
-                <span className="w-8 text-center text-base font-semibold">
-                  {filter.minStrength}
-                </span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setFilter((s) => ({
-                      ...s,
-                      minStrength: Math.min(10, s.minStrength + 1),
-                    }))
-                  }
-                  className="btn btn-sm btn-outline btn-square"
-                >
-                  +
-                </button>
-              </div>
+          {/* Stärke-Stepper */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <label className="text-sm text-base-content/70 whitespace-nowrap">ab</label>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() =>
+                  setFilter((s) => ({
+                    ...s,
+                    minStrength: Math.max(1, s.minStrength - 1),
+                  }))
+                }
+                className="btn btn-sm btn-outline btn-square"
+              >
+                −
+              </button>
+              <span className="w-8 text-center text-base font-semibold">
+                {filter.minStrength}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setFilter((s) => ({
+                    ...s,
+                    minStrength: Math.min(10, s.minStrength + 1),
+                  }))
+                }
+                className="btn btn-sm btn-outline btn-square"
+              >
+                +
+              </button>
             </div>
+            <span className="text-sm text-base-content/70 whitespace-nowrap">Stärke</span>
           </div>
+        </div>
+
 
           {/* Ort mit kleinem Such-Button */}
           <div className="flex gap-2">
