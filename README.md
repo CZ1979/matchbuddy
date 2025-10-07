@@ -126,6 +126,44 @@ App läuft dann unter: [http://localhost:5173](http://localhost:5173)
 
 ---
 
+## 🔄 Änderungen übernehmen
+
+Damit die neuen PWA-Funktionen (Service Worker + Installations-Dialog) lokal und in Produktion aktiv werden, gehe wie folgt vor:
+
+1. **Aktuellen Stand holen**
+   ```bash
+   git checkout work
+   git pull
+   ```
+2. **Abhängigkeiten aktualisieren** (nur falls `package.json` Änderungen enthält – sicherheitshalber einmal ausführen):
+   ```bash
+   npm install
+   ```
+3. **Produktions-Build prüfen**
+   ```bash
+   npm run build
+   ```
+   Damit wird der Service Worker generiert und du stellst sicher, dass alle Assets korrekt gebündelt sind.
+4. **Optional: Linting prüfen**
+   ```bash
+   npm run lint
+   ```
+   (bekannte Warnungen/Fehler siehe Issues; neue Probleme bitte beheben.)
+5. **Lokalen Server starten & Installation testen**
+   ```bash
+   npm run dev
+   ```
+   Öffne [http://localhost:5173](http://localhost:5173) in Chrome/Edge auf deinem Smartphone, akzeptiere den Installationshinweis oder löse ihn über das Drei-Punkte-Menü aus.
+6. **Deployment** (falls alles passt):
+   ```bash
+   git add .
+   git commit -m "Deploy PWA update"
+   git push
+   ```
+   Anschließend übernimmt GitHub Actions den Build & Upload zu Firebase Hosting.
+
+---
+
 ## ☁️ Deployment
 
 Das Projekt ist über **GitHub Actions** mit Firebase Hosting verknüpft.
