@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 
 const INSTALL_FLAG_KEY = "matchbuddy:pwa-installed";
 const DISMISS_UNTIL_KEY = "matchbuddy:pwa-dismissed-until";
@@ -72,8 +72,69 @@ export default function PwaInstallPrompt() {
   const [isStandalone, setIsStandalone] = useState(() => checkStandalone());
   const [hasInstalled, setHasInstalled] = useState(() => readBooleanFlag(INSTALL_FLAG_KEY));
   const [dismissedUntil, setDismissedUntil] = useState(() => readNumber(DISMISS_UNTIL_KEY));
+  const [isManualGuideOpen, setManualGuideOpen] = useState(false);
 
   const isDismissWindowActive = useMemo(() => Date.now() < dismissedUntil, [dismissedUntil]);
+
+  const manifestUrl = useMemo(() => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+
+    return new URL("/manifest.json", window.location.origin).href;
+  }, []);
+
+  const platformGuide = useMemo(() => {
+    if (typeof navigator === "undefined") {
+      return { title: "MatchBuddy installieren", steps: [] };
+    }
+
+    const userAgent = navigator.userAgent || "";
+    const isAndroid = /Android/i.test(userAgent);
+    const isIos = /iPhone|iPad|iPod/i.test(userAgent);
+    const isStandaloneWebApp = isStandalone;
+
+    if (isStandaloneWebApp) {
+      return {
+        title: "MatchBuddy ist installiert",
+        steps: [
+          "Öffne MatchBuddy direkt vom Startbildschirm, um schneller loszulegen.",
+          "Lege optional ein Widget oder eine Verknüpfung in deinen Favoriten an.",
+        ],
+      };
+    }
+
+    if (isAndroid) {
+      return {
+        title: "Android: Auf Startbildschirm ablegen",
+        steps: [
+          "Tippe auf \"Installieren\" und bestätige den Chrome-Dialog.",
+          "Nach wenigen Sekunden findest du das MatchBuddy-Symbol in deinem App Drawer.",
+          "Ziehe das Symbol bei Bedarf manuell auf den Startbildschirm.",
+        ],
+      };
+    }
+
+    if (isIos) {
+      return {
+        title: "iOS: Zum Home-Bildschirm hinzufügen",
+        steps: [
+          "Öffne MatchBuddy in Safari.",
+          "Tippe auf das Teilen-Symbol und wähle \"Zum Home-Bildschirm\".",
+          "Bestätige mit \"Hinzufügen\" – das MatchBuddy-Icon erscheint auf deinem Homescreen.",
+        ],
+      };
+    }
+
+    return {
+      title: "Desktop: App installieren",
+      steps: [
+        "Klicke auf \"Installieren\" und bestätige die Browser-Abfrage.",
+        "Auf macOS findest du MatchBuddy anschließend im Programme-Ordner und im Launchpad.",
+        "Auf Windows kannst du die App über das Startmenü anheften.",
+      ],
+    };
+  }, [isStandalone]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -114,6 +175,45 @@ export default function PwaInstallPrompt() {
   }, []);
 
   useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      typeof navigator === "undefined" ||
+      typeof navigator.getInstalledRelatedApps !== "function" ||
+      hasInstalled
+    ) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const checkRelatedApps = async () => {
+      try {
+        const apps = await navigator.getInstalledRelatedApps();
+        if (cancelled) {
+          return;
+        }
+
+        if (Array.isArray(apps) && apps.some((app) => app.platform === "webapp" && app.url === manifestUrl)) {
+          setHasInstalled(true);
+          writeLocalStorage(INSTALL_FLAG_KEY, "true");
+          clearLocalStorage(DISMISS_UNTIL_KEY);
+        }
+      } catch (error) {
+        console.warn("PWA related apps lookup failed", error);
+      }
+    };
+
+    checkRelatedApps();
+
+    const intervalId = window.setInterval(checkRelatedApps, 15_000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [hasInstalled, manifestUrl]);
+
+  useEffect(() => {
     if (typeof window === "undefined" || isStandalone || hasInstalled) {
       return undefined;
     }
@@ -135,6 +235,7 @@ export default function PwaInstallPrompt() {
       setHasInstalled(true);
       writeLocalStorage(INSTALL_FLAG_KEY, "true");
       clearLocalStorage(DISMISS_UNTIL_KEY);
+      setManualGuideOpen(true);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
@@ -159,6 +260,7 @@ export default function PwaInstallPrompt() {
         setHasInstalled(true);
         writeLocalStorage(INSTALL_FLAG_KEY, "true");
         clearLocalStorage(DISMISS_UNTIL_KEY);
+        setManualGuideOpen(true);
       } else {
         const nextAllowed = Date.now() + DISMISS_DURATION_MS;
         setDismissedUntil(nextAllowed);
@@ -180,26 +282,93 @@ export default function PwaInstallPrompt() {
     setIsVisible(false);
   };
 
-  if (isStandalone || hasInstalled || !isVisible || isDismissWindowActive) {
-    return null;
-  }
+  const canPromptInstall = Boolean(deferredPrompt);
 
   return (
-    <div className="alert alert-info shadow-lg fixed bottom-24 left-4 right-4 z-50 sm:left-auto sm:right-4 sm:w-96 sm:bottom-6">
-      <div className="flex flex-col gap-1">
-        <span className="font-semibold text-base">MatchBuddy installieren</span>
-        <span className="text-sm opacity-80">
-          Füge MatchBuddy deinem Startbildschirm hinzu, um jederzeit schnell loszulegen.
-        </span>
-      </div>
-      <div className="flex gap-2">
-        <button type="button" className="btn btn-ghost btn-sm" onClick={handleDismiss}>
-          Später
-        </button>
-        <button type="button" className="btn btn-primary btn-sm" onClick={handleInstall}>
-          Installieren
-        </button>
-      </div>
-    </div>
+    <Fragment>
+      {isStandalone || hasInstalled || !isVisible || isDismissWindowActive ? null : (
+        <div className="alert alert-info shadow-lg fixed bottom-24 left-4 right-4 z-50 sm:left-auto sm:right-4 sm:w-96 sm:bottom-6">
+          <div className="flex flex-col gap-1">
+            <span className="font-semibold text-base">MatchBuddy installieren</span>
+            <span className="text-sm opacity-80">
+              Füge MatchBuddy deinem Startbildschirm hinzu, um jederzeit schnell loszulegen.
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <button type="button" className="btn btn-ghost btn-sm" onClick={handleDismiss}>
+              Später
+            </button>
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => setManualGuideOpen(true)}>
+              Anleitung
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={handleInstall}
+              disabled={!canPromptInstall}
+            >
+              Installieren
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isManualGuideOpen ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
+          <div className="card w-full max-w-lg bg-base-100 shadow-2xl">
+            <div className="card-body gap-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="card-title text-lg">{platformGuide.title}</h2>
+                  <p className="text-sm opacity-80">
+                    Betriebssysteme verlangen eine ausdrückliche Zustimmung, bevor eine Web-App auf dem Startbildschirm landet.
+                    Folge den Schritten, damit MatchBuddy dauerhaft verfügbar ist.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  aria-label="Anleitung schließen"
+                  onClick={() => setManualGuideOpen(false)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <ol className="list-decimal list-inside space-y-2 text-sm">
+                {platformGuide.steps.map((step, index) => (
+                  <li key={index} className="leading-snug">
+                    {step}
+                  </li>
+                ))}
+              </ol>
+
+              <div className="alert alert-warning text-sm">
+                <span>
+                  Hinweis: Ohne deine Bestätigung dürfen Browser keine App automatisch installieren. Sobald du den Dialog
+                  bestätigt hast, erscheint das MatchBuddy-Symbol auf deinem Gerät.
+                </span>
+              </div>
+
+              <div className="card-actions justify-end gap-2">
+                {!isStandalone && !hasInstalled && (
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={handleInstall}
+                    disabled={!canPromptInstall}
+                  >
+                    Installationsdialog öffnen
+                  </button>
+                )}
+                <button type="button" className="btn btn-primary btn-sm" onClick={() => setManualGuideOpen(false)}>
+                  Verstanden
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </Fragment>
   );
 }

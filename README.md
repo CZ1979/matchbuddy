@@ -51,6 +51,23 @@ Viele Trainer kennen das Problem:
 
 ---
 
+## ❗️ Warum keine automatische Installation möglich ist
+
+Smartphones und Desktop-Browser lassen **keine ungefragte Installation** von Web-Apps zu. Selbst wenn ein Service Worker,
+Manifest und HTTPS vorhanden sind, muss immer eine Benutzeraktion den Installationsdialog bestätigen. Das schützt vor
+unbemerkter App-Verteilung und ist von Google, Apple und Microsoft vorgeschrieben.
+
+Damit MatchBuddy trotzdem zuverlässig auf dem Homescreen landet, zeigt die App jetzt:
+
+- einen Installationshinweis mit direkter Schaltfläche zum Systemdialog,
+- eine Schritt-für-Schritt-Anleitung, falls der Browser keinen Dialog anbietet,
+- eine Erinnerung nach erfolgreicher Installation, wo das Icon zu finden ist.
+
+> 📌 Tipp: Auf Android landet MatchBuddy nach der Bestätigung im App Drawer. Von dort kann die App wie gewohnt auf den
+Startbildschirm gezogen werden. Auf iOS erfolgt das Hinzufügen über „Teilen → Zum Home-Bildschirm“ in Safari.
+
+---
+
 ## 🧩 Datenstruktur
 
 ### **Collection: `profiles`**
