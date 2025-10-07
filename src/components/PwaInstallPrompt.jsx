@@ -1,4 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+const INSTALL_FLAG_KEY = "matchbuddy:pwa-installed";
+const DISMISS_UNTIL_KEY = "matchbuddy:pwa-dismissed-until";
+const DISMISS_DURATION_MS = 1000 * 60 * 60 * 24 * 3; // 3 Tage Ruhe nach "Später"
 
 function checkStandalone() {
   if (typeof window === "undefined") {
@@ -10,10 +14,66 @@ function checkStandalone() {
   return Boolean(mediaQuery?.matches || window.navigator.standalone === true);
 }
 
+function readBooleanFlag(key) {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  try {
+    return window.localStorage.getItem(key) === "true";
+  } catch (error) {
+    console.warn("PWA localStorage access failed", error);
+    return false;
+  }
+}
+
+function readNumber(key) {
+  if (typeof window === "undefined") {
+    return 0;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(key);
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : 0;
+  } catch (error) {
+    console.warn("PWA localStorage access failed", error);
+    return 0;
+  }
+}
+
+function writeLocalStorage(key, value) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(key, value);
+  } catch (error) {
+    console.warn("PWA localStorage write failed", error);
+  }
+}
+
+function clearLocalStorage(key) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.removeItem(key);
+  } catch (error) {
+    console.warn("PWA localStorage clear failed", error);
+  }
+}
+
 export default function PwaInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isStandalone, setIsStandalone] = useState(() => checkStandalone());
+  const [hasInstalled, setHasInstalled] = useState(() => readBooleanFlag(INSTALL_FLAG_KEY));
+  const [dismissedUntil, setDismissedUntil] = useState(() => readNumber(DISMISS_UNTIL_KEY));
+
+  const isDismissWindowActive = useMemo(() => Date.now() < dismissedUntil, [dismissedUntil]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -23,7 +83,13 @@ export default function PwaInstallPrompt() {
     const mediaQuery = window.matchMedia?.("(display-mode: standalone)");
 
     const updateStandalone = () => {
-      setIsStandalone(checkStandalone());
+      const standalone = checkStandalone();
+      setIsStandalone(standalone);
+      if (standalone) {
+        setHasInstalled(true);
+        writeLocalStorage(INSTALL_FLAG_KEY, "true");
+        clearLocalStorage(DISMISS_UNTIL_KEY);
+      }
     };
 
     updateStandalone();
@@ -48,11 +114,15 @@ export default function PwaInstallPrompt() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined" || isStandalone) {
+    if (typeof window === "undefined" || isStandalone || hasInstalled) {
       return undefined;
     }
 
     const handleBeforeInstallPrompt = (event) => {
+      if (isDismissWindowActive) {
+        return;
+      }
+
       event.preventDefault();
       setDeferredPrompt(event);
       setIsVisible(true);
@@ -62,6 +132,9 @@ export default function PwaInstallPrompt() {
       setIsVisible(false);
       setDeferredPrompt(null);
       setIsStandalone(true);
+      setHasInstalled(true);
+      writeLocalStorage(INSTALL_FLAG_KEY, "true");
+      clearLocalStorage(DISMISS_UNTIL_KEY);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
@@ -71,7 +144,7 @@ export default function PwaInstallPrompt() {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
-  }, [isStandalone]);
+  }, [hasInstalled, isStandalone, isDismissWindowActive]);
 
   const handleInstall = async () => {
     if (!deferredPrompt) {
@@ -79,17 +152,35 @@ export default function PwaInstallPrompt() {
     }
 
     deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
+
+    try {
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        setHasInstalled(true);
+        writeLocalStorage(INSTALL_FLAG_KEY, "true");
+        clearLocalStorage(DISMISS_UNTIL_KEY);
+      } else {
+        const nextAllowed = Date.now() + DISMISS_DURATION_MS;
+        setDismissedUntil(nextAllowed);
+        writeLocalStorage(DISMISS_UNTIL_KEY, String(nextAllowed));
+      }
+    } catch (error) {
+      console.warn("PWA install prompt failed", error);
+    }
 
     setDeferredPrompt(null);
     setIsVisible(false);
   };
 
   const handleDismiss = () => {
+    const nextAllowed = Date.now() + DISMISS_DURATION_MS;
+    setDismissedUntil(nextAllowed);
+    writeLocalStorage(DISMISS_UNTIL_KEY, String(nextAllowed));
+    setDeferredPrompt(null);
     setIsVisible(false);
   };
 
-  if (isStandalone || !isVisible) {
+  if (isStandalone || hasInstalled || !isVisible || isDismissWindowActive) {
     return null;
   }
 
