@@ -43,26 +43,25 @@ export default function Layout() {
       </header>
 
       {/* ZENTRALER CONTAINER */}
-      <main className="flex-grow pb-20">
+      <main className="flex-grow pb-16">
         <div className="max-w-6xl mx-auto w-full px-4">
           <Outlet />
         </div>
       </main>
 
+    
+
+      {/* FOOTER – sitzt bewusst über der fixen BottomNav */}
+        <footer className="bg-base-100 border-t border-base-300 py-4 text-center text-sm text-base-content/70 mb-[calc(env(safe-area-inset-bottom)+4rem)] sm:mb-0">
+        <p>© {new Date().getFullYear()} MatchBuddy – Entwickelt für Trainerinnen und Trainer 💚</p>
+        <a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="hover:underline">
+          Datenschutzerklärung
+        </a>
+      </footer>
+
       <BottomNav />
 
-      {/* FOOTER */}
-      <footer className="bg-base-100 border-t border-base-300 py-4 text-center text-sm text-base-content/70">
-        <p>© {new Date().getFullYear()} MatchBuddy – Entwickelt für Trainerinnen und Trainer 💚</p>
-         <a
-    href="/privacy.html"
-    target="_blank"
-    rel="noopener noreferrer"
-    className="hover:underline"
-  >
-    Datenschutzerklärung
-  </a>
-      </footer>
+
     </div>
   );
 }
