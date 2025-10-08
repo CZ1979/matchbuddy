@@ -11,47 +11,8 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { useUserLocation } from "../hooks/useUserLocation";
-
-// 📅 Hilfsfunktion für deutsches Datum
-function formatDateGerman(dateStr) {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  if (isNaN(d)) return dateStr;
-  return d.toLocaleDateString("de-DE", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
-
-const generateAgeGroups = () => {
-  const currentYear = new Date().getFullYear();
-  const list = [];
-  for (let age = 6; age <= 19; age++) {
-    const birthYear = currentYear - age;
-    list.push({ label: String(birthYear), value: String(birthYear) });
-  }
-  list.push(
-    { label: "Herren", value: "Herren" },
-    { label: "Damen", value: "Damen" },
-    { label: "Soma", value: "Soma" }
-  );
-  return list;
-};
-
-const normalizeAgeGroup = (value) => {
-  if (value == null) return "";
-  const str = value.toString();
-  const match = str.match(/^U(\d{1,2})/i);
-  if (match) {
-    const age = parseInt(match[1], 10);
-    if (!isNaN(age)) {
-      const currentYear = new Date().getFullYear();
-      return String(currentYear - age);
-    }
-  }
-  return str;
-};
+import { formatDateGerman } from "../utils/date";
+import { generateAgeGroups, normalizeAgeGroup } from "../utils/ageGroups";
 
 export default function NewGame() {
   const saved = JSON.parse(localStorage.getItem("newGameDefaults") || "{}");
