@@ -134,6 +134,11 @@ export default function NewGame() {
       let lat = null,
         lng = null;
 
+      const contactEmail = (profile.email || "").trim();
+      const contactEmailNormalized = contactEmail.toLowerCase();
+      const trainerProfileId = profile.id || contactEmailNormalized || "";
+      const trainerEmail = contactEmailNormalized || profile.id || "";
+
       if (newGame.locationType !== "away") {
         const geo = await geocodeAddress(newGame.address, newGame.zip, newGame.city);
         if (geo) {
@@ -151,10 +156,11 @@ export default function NewGame() {
         lng,
         ownerName,
         ownerClub: profile.club || "",
-        contactEmail: profile.email || "",
+        contactEmail,
+        contactEmailNormalized,
         contactPhone: profile.phone || "",
-        trainerEmail: profile.id,
-        trainerProfileId: profile.id,
+        trainerEmail,
+        trainerProfileId,
         createdAt: serverTimestamp(),
       });
 

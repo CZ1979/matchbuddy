@@ -1,14 +1,32 @@
 import clsx from "clsx";
-import { CalendarDays, Clock, MapPin, Navigation } from "lucide-react";
+import { BarChart3, CalendarDays, Clock, Mail, MapPin, Navigation, UsersRound } from "lucide-react";
 import OverflowMenu from "./OverflowMenu";
 import { buildGoogleMapsRouteUrl } from "../lib/maps";
 import { formatDateGerman } from "../utils/date";
 import { buildWhatsAppUrl } from "../lib/whatsapp";
 
+const WhatsAppIcon = (props) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+    <path
+      fill="currentColor"
+      d="M12 2a10 10 0 0 0-8.94 14.56L2 22l5.62-1.47A10 10 0 1 0 12 2Zm0 2a8 8 0 1 1-4.06 14.9l-.3-.17-3.19.84.86-3.11-.18-.3A8 8 0 0 1 12 4Zm-3.08 4.72c-.18-.4-.35-.4-.51-.41h-.43c-.14 0-.37.05-.55.24s-.72.7-.72 1.69 0 1.64.74 2.51 1 1.24 1.14 1.42 1.03 1.64 2.51 2.22 1.51.36 1.79.34.88-.36 1-.71.13-.64.1-.7-.14-.1-.29-.18-.88-.43-1.01-.48-.24-.07-.34.07-.4.48-.47.58-.18.13-.34.04a7.05 7.05 0 0 1-2.1-1.29 7.61 7.61 0 0 1-1.44-1.79c-.15-.24 0-.37.11-.5.26-.27.35-.44.39-.52s.02-.3-.01-.39-.29-.7-.4-.96Z"
+    />
+  </svg>
+);
+
 const toDistanceLabel = (distanceKm) => {
   if (typeof distanceKm !== "number" || Number.isNaN(distanceKm)) return "";
   if (distanceKm < 1) return "< 1 km entfernt";
   return `~${Math.round(distanceKm)} km entfernt`;
+};
+
+const formatAgeGroupLabel = (value) => {
+  if (!value) return "";
+  const str = value.toString();
+  if (/^\d{4}$/.test(str)) {
+    return `Jahrgang ${str}`;
+  }
+  return str;
 };
 
 const resolveBadge = (game) => {
@@ -44,11 +62,15 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
   const badgeLabel = resolveBadge(game);
   const dateLabel = game.date ? formatDateGerman(game.date) : "Datum folgt";
   const distanceLabel = toDistanceLabel(game.distanceKm);
+  const ageGroupLabel = formatAgeGroupLabel(game.displayAgeGroup || game.originalAgeGroup || game.ageGroup);
+  const strengthLabel = game.strength ? `Stärke ${game.strength}` : "";
   const whatsappUrl = buildWhatsAppUrl({
     phone: game.contactPhone,
     message: buildContactMessage(game, viewerProfile),
   });
-  const hasContact = Boolean(whatsappUrl);
+  const hasWhatsapp = Boolean(whatsappUrl);
+  const emailLink = typeof game.contactEmail === "string" && game.contactEmail.trim() ? `mailto:${game.contactEmail}` : "";
+  const hasEmail = Boolean(emailLink);
   const mapsUrl = buildGoogleMapsRouteUrl({ address: game.address, zip: game.zip, city: game.city });
 
   const infoChips = [
@@ -63,13 +85,25 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
           icon: <Clock size={14} />,
         }
       : null,
+    ageGroupLabel
+      ? {
+          label: ageGroupLabel,
+          icon: <UsersRound size={14} />,
+        }
+      : null,
+    strengthLabel
+      ? {
+          label: strengthLabel,
+          icon: <BarChart3 size={14} />,
+        }
+      : null,
   ].filter(Boolean);
 
   return (
     <article
       className={clsx(
-        "relative overflow-hidden rounded-3xl bg-white p-5 shadow-lg shadow-emerald-100/70 ring-1 ring-emerald-100",
-        isSaved && "ring-2 ring-emerald-400 shadow-emerald-200/80"
+        "relative overflow-hidden rounded-3xl p-5 shadow-lg shadow-emerald-100/70 ring-1 ring-emerald-100 transition-colors duration-200",
+        isSaved ? "bg-emerald-50/80 ring-2 ring-emerald-400 shadow-emerald-200/80" : "bg-white hover:bg-emerald-50/60"
       )}
     >
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600" />
@@ -111,28 +145,38 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
         ))}
       </div>
 
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+      <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <a
-          href={hasContact ? whatsappUrl : undefined}
+          href={hasWhatsapp ? whatsappUrl : undefined}
           target="_blank"
           rel="noreferrer"
-          aria-disabled={!hasContact}
-          tabIndex={hasContact ? undefined : -1}
+          aria-disabled={!hasWhatsapp}
+          tabIndex={hasWhatsapp ? undefined : -1}
           className={clsx(
-            "inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition sm:flex-1",
-            hasContact
+            "inline-flex w-full items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition sm:flex-1",
+            hasWhatsapp
               ? "bg-emerald-500 text-white shadow-sm hover:bg-emerald-600"
               : "cursor-not-allowed bg-slate-200 text-slate-400"
           )}
         >
-          Kontakt aufnehmen
+          <WhatsAppIcon className="h-4 w-4" />
+          <span>WhatsApp</span>
         </a>
+        {hasEmail && (
+          <a
+            href={emailLink}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 sm:flex-1"
+          >
+            <Mail size={16} />
+            <span>E-Mail</span>
+          </a>
+        )}
         {mapsUrl && (
           <a
             href={mapsUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 sm:flex-1"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 sm:flex-1"
           >
             <Navigation size={16} /> Route
           </a>
@@ -140,7 +184,7 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
         <button
           type="button"
           onClick={() => onDetails?.(game)}
-          className="inline-flex w-full items-center justify-center rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 sm:flex-1"
+          className="inline-flex w-full items-center justify-center rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 sm:flex-1"
         >
           Mehr Details
         </button>
