@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import toast from "react-hot-toast";
 import { db } from "../firebase";
+import ProfileSaveFlow from "../components/ProfileSaveFlow";
 
 export default function Profile() {
   const [profile, setProfile] = useState({
@@ -12,18 +15,26 @@ export default function Profile() {
   });
 
   const [isSaving, setIsSaving] = useState(false);
-  const [savedMsg, setSavedMsg] = useState("");
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isFlowVisible = searchParams.get("saved") === "1";
 
   // 🔁 Profil aus LocalStorage laden
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem("trainerProfile") || "{}");
-    if (stored.email) setProfile(stored);
+    try {
+      const stored = JSON.parse(localStorage.getItem("trainerProfile") || "{}");
+      if (stored && Object.keys(stored).length > 0) {
+        setProfile((prev) => ({ ...prev, ...stored }));
+      }
+    } catch (error) {
+      console.warn("Profil konnte nicht geladen werden:", error);
+    }
   }, []);
 
   // 💾 Speichern (LocalStorage + Firestore)
   const saveProfile = async () => {
     if (!profile.email) {
-      alert("Bitte eine E-Mail-Adresse angeben.");
+      toast.error("Bitte eine E-Mail-Adresse angeben.");
       return;
     }
 
@@ -40,15 +51,23 @@ export default function Profile() {
         updatedAt: serverTimestamp(),
       });
 
-      setSavedMsg("Profil erfolgreich gespeichert!");
-      setTimeout(() => setSavedMsg(""), 4000);
+      toast.success("✅ Profil erfolgreich gespeichert!");
+      navigate("/profil?saved=1", { replace: true });
     } catch (err) {
       console.error("Fehler beim Speichern:", err);
-      alert("Profil konnte nicht gespeichert werden.");
+      toast.error("Profil konnte nicht gespeichert werden.");
     } finally {
       setIsSaving(false);
     }
   };
+
+  if (isFlowVisible) {
+    return (
+      <div className="p-4">
+        <ProfileSaveFlow onBackToProfile={() => navigate("/profil", { replace: true })} />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4">
@@ -59,12 +78,6 @@ export default function Profile() {
             Gib deine Kontaktdaten ein, damit andere Trainer dich erreichen können.
             Deine E-Mail-Adresse wird zur Zuordnung deiner Spiele verwendet.
           </p>
-
-          {savedMsg && (
-            <div className="alert alert-success text-sm py-2 mb-3">
-              {savedMsg}
-            </div>
-          )}
 
           <div className="grid grid-cols-1 gap-3">
             <input
@@ -92,7 +105,7 @@ export default function Profile() {
               value={profile.club}
               onChange={(e) => setProfile((s) => ({ ...s, club: e.target.value }))}
             />
-           <input
+            <input
               type="tel"
               placeholder="Telefon (z. B. +49 176 1234567)"
               className="input input-bordered w-full"
