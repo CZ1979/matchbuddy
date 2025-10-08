@@ -23,6 +23,35 @@ const distanceKm = (lat1, lon1, lat2, lon2) => {
   return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 };
 
+const generateAgeGroups = () => {
+  const currentYear = new Date().getFullYear();
+  const list = [];
+  for (let age = 6; age <= 19; age++) {
+    const birthYear = currentYear - age;
+    list.push({ label: String(birthYear), value: String(birthYear) });
+  }
+  list.push(
+    { label: "Herren", value: "Herren" },
+    { label: "Damen", value: "Damen" },
+    { label: "Soma", value: "Soma" }
+  );
+  return list;
+};
+
+const normalizeAgeGroup = (value) => {
+  if (value == null) return "";
+  const str = value.toString();
+  const match = str.match(/^U(\d{1,2})/i);
+  if (match) {
+    const age = parseInt(match[1], 10);
+    if (!isNaN(age)) {
+      const currentYear = new Date().getFullYear();
+      return String(currentYear - age);
+    }
+  }
+  return str;
+};
+
 export default function Games() {
   const [games, setGames] = useState([]);
   const [ageGroups, setAgeGroups] = useState([]);
@@ -38,10 +67,7 @@ export default function Games() {
   const trainerProfile = JSON.parse(localStorage.getItem("trainerProfile") || "{}");
 
   useEffect(() => {
-    const year = new Date().getFullYear();
-    const list = [];
-    for (let u = 6; u <= 21; u++) list.push({ label: `U${u} / ${year - u}`, value: `U${u}` });
-    setAgeGroups(list);
+    setAgeGroups(generateAgeGroups());
   }, []);
 
   useEffect(() => {
@@ -100,7 +126,10 @@ export default function Games() {
 
   const filtered = useMemo(() => {
     return games.filter((g) => {
-      if (filter.ageGroup && !g.ageGroup?.startsWith(filter.ageGroup)) return false;
+      if (filter.ageGroup) {
+        const ageGroupValue = normalizeAgeGroup(g.ageGroup);
+        if (ageGroupValue !== filter.ageGroup) return false;
+      }
       const strengthNum = Number(g.strength);
       if (!isNaN(strengthNum) && strengthNum < filter.minStrength) return false;
 
@@ -278,6 +307,8 @@ export default function Games() {
                 distanceText = `~${Math.round(dist)} km entfernt`;
               }
 
+              const normalizedGroup = normalizeAgeGroup(g.ageGroup);
+
               return (
                 <li
                   key={g.id}
@@ -286,7 +317,7 @@ export default function Games() {
                   <div>
                     <div className="font-semibold">
                       {formatDateGerman(g.date)} {g.time && `• ${g.time}`}{" "}
-                      {g.ageGroup && `• ${g.ageGroup}`}{" "}
+                      {normalizedGroup && `• ${normalizedGroup}`}{" "}
                       {g.strength && (
                         <span className="text-xs text-primary ml-1">
                           💪 Stärke: {g.strength}

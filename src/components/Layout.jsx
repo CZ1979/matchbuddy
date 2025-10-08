@@ -1,9 +1,8 @@
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { useState } from "react";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import logo from "../assets/logo.svg"; // ← Pfad prüfen
 import BottomNav from "./BottomNav";
-import { useState } from "react";
 import FeedbackModal from "./FeedbackModal";
-import PwaInstallPrompt from "./PwaInstallPrompt";
 
 export default function Layout() {
   const location = useLocation();
@@ -70,7 +69,6 @@ export default function Layout() {
       {/* Feedback Modal */}
       <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setFeedbackOpen(false)} />
 
-      <PwaInstallPrompt />
       <BottomNav />
     </div>
   );
