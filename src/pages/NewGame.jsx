@@ -232,6 +232,7 @@ export default function NewGame() {
             />
 
             {/* Altersklasse */}
+            <label className="text-sm font-medium">Jahrgang</label>
             <select
               className="select select-bordered w-full"
               value={newGame.ageGroup}
@@ -246,6 +247,7 @@ export default function NewGame() {
             </select>
 
             {/* Spielstärke */}
+            <label className="text-sm font-medium">Spielstärke</label>
             <select
               className="select select-bordered w-full"
               value={newGame.strength}
@@ -260,6 +262,7 @@ export default function NewGame() {
             </select>
 
             {/* Spielort */}
+            <label className="text-sm font-medium">Spielort</label>
             <select
               className="select select-bordered w-full"
               value={newGame.locationType}
@@ -273,6 +276,8 @@ export default function NewGame() {
             {/* Adresse */}
             {newGame.locationType !== "away" && (
               <>
+                <label className="text-sm font-medium">Adresse</label>
+
                 <input
                   type="text"
                   placeholder="Straße und Hausnummer"
@@ -296,20 +301,14 @@ export default function NewGame() {
                     onChange={(e) => setNewGame((s) => ({ ...s, city: e.target.value }))}
                   />
                 </div>
-                <button
-                  type="button"
-                  className="btn btn-outline w-full"
-                  onClick={fillWithMyLocation}
-                  disabled={isLoading}
-                >
-                  {isLoading ? "📍 Standort wird gesucht…" : "📍 Meine Position verwenden"}
-                </button>
+                
               </>
             )}
 
             {/* Notizen */}
+              <label className="text-sm font-medium">Sonstige Hinweise</label>
             <textarea
-              placeholder="Notizen (optional)"
+              placeholder="Hinweise (optional)"
               className="textarea textarea-bordered w-full"
               rows={3}
               value={newGame.notes}
