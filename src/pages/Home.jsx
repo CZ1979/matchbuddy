@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { collection, getDocs, limit, orderBy, query, where } from "firebase/firestore";
 import { User, Trophy, MapPin } from "lucide-react";
@@ -6,6 +6,7 @@ import { db } from "../firebase";
 import { useUserLocation } from "../hooks/useUserLocation";
 import GameCarousel from "../components/GameCarousel";
 import { filterGamesByDistance, getRecommendedGames } from "../utils/RecommendationEngine";
+import toast from "react-hot-toast";
 
 const readProfileFromStorage = () => {
   if (typeof window === "undefined") return {};
@@ -31,6 +32,9 @@ export default function Home() {
   const [latestGames, setLatestGames] = useState([]);
   const [isFetching, setIsFetching] = useState(false);
   const [loadError, setLoadError] = useState("");
+
+  const previousProfileRef = useRef(trainerProfile);
+  const didInitRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -73,7 +77,8 @@ export default function Home() {
         const baseGames = upcoming.length > 0 ? upcoming : docs;
 
         let userGames = [];
-        if (trainerEmail) {
+        let recommended = [];
+        if (hasProfile && trainerEmail) {
           const ownQuery = query(
             collection(db, "games"),
             where("trainerEmail", "==", trainerEmail),
@@ -82,14 +87,14 @@ export default function Home() {
           );
           const ownSnapshot = await getDocs(ownQuery);
           userGames = ownSnapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-        }
 
-        const recommended = getRecommendedGames({
-          games: baseGames,
-          userGames,
-          userLocation: location,
-          maxResults: 6,
-        });
+          recommended = getRecommendedGames({
+            games: baseGames,
+            userGames,
+            userLocation: location,
+            maxResults: 6,
+          });
+        }
 
         const recommendedIds = new Set(recommended.map((game) => game.id));
         const distanceFiltered = filterGamesByDistance(baseGames, location, 30);
@@ -122,10 +127,52 @@ export default function Home() {
     ? "Spiele im Umkreis von 30 km"
     : "Wir zeigen dir die neuesten Spiele – aktiviere Standort, um Spiele in deiner Nähe zu sehen.";
 
+  const isShowingRecommendations = hasProfile && recommendedGames.length > 0;
+  const gamesForCarousel = isShowingRecommendations ? recommendedGames : latestGames;
+  const carouselTitle = isShowingRecommendations
+    ? "🧭 Diese Spiele passen zu deinem Profil"
+    : "✳️ Neueste Spiele in deiner Nähe";
+  const carouselSubtitle = isShowingRecommendations
+    ? "Basierend auf deinen bisherigen Spielen"
+    : latestSubtitle;
+  const isInitialLoading =
+    isFetching && recommendedGames.length === 0 && latestGames.length === 0 && gamesForCarousel.length === 0;
+
   const handleNewGameClick = () => {
     if (!hasProfile) return;
     navigate("/neues-spiel");
   };
+
+  useEffect(() => {
+    if (!didInitRef.current) {
+      didInitRef.current = true;
+      previousProfileRef.current = trainerProfile;
+      return;
+    }
+
+    const previousProfile = previousProfileRef.current || {};
+    const previousHasProfile = Boolean(previousProfile.email);
+    const currentHasProfile = Boolean(trainerProfile?.email);
+
+    previousProfileRef.current = trainerProfile;
+
+    if (!currentHasProfile) {
+      return;
+    }
+
+    if (!previousHasProfile && currentHasProfile) {
+      toast.success("Profil gespeichert – deine Empfehlungen werden aktualisiert.");
+      return;
+    }
+
+    if (previousHasProfile) {
+      const prevSerialized = JSON.stringify(previousProfile);
+      const nextSerialized = JSON.stringify(trainerProfile || {});
+      if (prevSerialized !== nextSerialized) {
+        toast.success("Profil gespeichert – deine Empfehlungen werden aktualisiert.");
+      }
+    }
+  }, [trainerProfile]);
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-8 p-4">
@@ -201,7 +248,7 @@ export default function Home() {
       <section className="space-y-6">
         {loadError && <p className="text-sm text-error">{loadError}</p>}
 
-        {isFetching && recommendedGames.length === 0 && latestGames.length === 0 ? (
+        {isInitialLoading ? (
           <div className="rounded-2xl border border-base-200 bg-base-100 p-6">
             <div className="h-5 w-40 animate-pulse rounded bg-base-300" />
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -212,20 +259,10 @@ export default function Home() {
           </div>
         ) : (
           <div className="space-y-6">
-            {recommendedGames.length > 0 && (
-              <GameCarousel
-                title="🧭 Diese Spiele passen zu deinem Profil"
-                subtitle="Basierend auf deinen bisherigen Spielen"
-                games={recommendedGames}
-                viewerProfile={trainerProfile}
-                viewerLocation={location}
-              />
-            )}
-
             <GameCarousel
-              title="✳️ Neueste Spiele in deiner Nähe"
-              subtitle={latestSubtitle}
-              games={latestGames}
+              title={carouselTitle}
+              subtitle={carouselSubtitle}
+              games={gamesForCarousel}
               viewerProfile={trainerProfile}
               viewerLocation={location}
             />

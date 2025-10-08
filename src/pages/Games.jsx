@@ -240,6 +240,7 @@ export default function Games() {
                 viewerLocation={center}
                 anchorId={`game-${g.id}`}
                 isHighlighted={highlightId === g.id}
+                showDetailsButton={false}
               />
             ))}
           </div>
