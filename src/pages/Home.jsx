@@ -23,8 +23,9 @@ export default function Home() {
   const navigate = useNavigate();
   const { location, isLoading, updateLocation } = useUserLocation(true);
 
-  const [trainerProfile, setTrainerProfile] = useState(() => readProfileFromStorage());
-  const trainerEmail = trainerProfile?.email || readTrainerEmail();
+  const [trainerProfile, setTrainerProfile] = useState(null);
+  const [trainerEmail, setTrainerEmail] = useState("");
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
   const hasProfile = Boolean(trainerEmail);
 
   const [recommendedGames, setRecommendedGames] = useState([]);
@@ -36,7 +37,13 @@ export default function Home() {
     if (typeof window === "undefined") return undefined;
 
     const sync = () => {
-      setTrainerProfile(readProfileFromStorage());
+      const storedProfile = readProfileFromStorage();
+      const hasStoredProfile = storedProfile && Object.keys(storedProfile).length > 0;
+      const fallbackEmail = readTrainerEmail();
+
+      setTrainerProfile(hasStoredProfile ? storedProfile : null);
+      setTrainerEmail(hasStoredProfile ? storedProfile.email || fallbackEmail : "");
+      setIsProfileLoading(false);
     };
 
     window.addEventListener("storage", sync);
@@ -50,13 +57,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!hasProfile) {
-      setRecommendedGames([]);
-    }
-  }, [hasProfile]);
-
-  useEffect(() => {
-    if (isLoading) return;
+    if (isProfileLoading) return;
     let cancelled = false;
 
     const fetchGames = async () => {
@@ -80,12 +81,7 @@ export default function Home() {
 
         let recommended = [];
         if (hasProfile && trainerEmail) {
-          const ownQuery = query(
-            collection(db, "games"),
-            where("trainerEmail", "==", trainerEmail),
-            orderBy("createdAt", "desc"),
-            limit(20)
-          );
+          const ownQuery = query(collection(db, "games"), where("trainerEmail", "==", trainerEmail), limit(20));
           const ownSnapshot = await getDocs(ownQuery);
           const userGames = ownSnapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
 
@@ -122,7 +118,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [location, isLoading, trainerEmail, hasProfile]);
+  }, [location, trainerEmail, hasProfile, isProfileLoading]);
 
   const latestSubtitle = location
     ? "Spiele im Umkreis von 30 km"
@@ -214,32 +210,40 @@ export default function Home() {
       </section>
 
       <section className="space-y-6">
-        {loadError && <p className="text-sm text-error">{loadError}</p>}
-
-        {isFetching && carouselGames.length === 0 ? (
-          <div className="rounded-2xl border border-base-200 bg-base-100 p-6">
-            <div className="h-5 w-40 animate-pulse rounded bg-base-300" />
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {[0, 1].map((key) => (
-                <div key={key} className="h-48 animate-pulse rounded-2xl bg-base-200" />
-              ))}
-            </div>
+        {isProfileLoading ? (
+          <div className="flex justify-center py-12">
+            <span className="loading loading-spinner loading-lg text-primary" aria-label="Profil wird geladen" />
           </div>
         ) : (
-          <GameCarousel
-            title={carouselTitle}
-            subtitle={carouselSubtitle}
-            games={carouselGames}
-            viewerProfile={trainerProfile}
-            viewerLocation={location}
-          />
-        )}
+          <>
+            {loadError && <p className="text-sm text-error">{loadError}</p>}
 
-        <div className="flex justify-center">
-          <Link to="/spiele" className="btn btn-outline btn-primary">
-            Alle Spiele anzeigen
-          </Link>
-        </div>
+            {isFetching && carouselGames.length === 0 ? (
+              <div className="rounded-2xl border border-base-200 bg-base-100 p-6">
+                <div className="h-5 w-40 animate-pulse rounded bg-base-300" />
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  {[0, 1].map((key) => (
+                    <div key={key} className="h-48 animate-pulse rounded-2xl bg-base-200" />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <GameCarousel
+                title={carouselTitle}
+                subtitle={carouselSubtitle}
+                games={carouselGames}
+                viewerProfile={trainerProfile || {}}
+                viewerLocation={location}
+              />
+            )}
+
+            <div className="flex justify-center">
+              <Link to="/spiele" className="btn btn-outline btn-primary">
+                Alle Spiele anzeigen
+              </Link>
+            </div>
+          </>
+        )}
       </section>
     </div>
   );
