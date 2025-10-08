@@ -78,6 +78,10 @@ export default function Home() {
         const today = new Date().toISOString().split("T")[0];
         const upcoming = docs.filter((game) => !game.date || game.date >= today);
         const baseGames = upcoming.length > 0 ? upcoming : docs;
+        const filteredBaseGames =
+          hasProfile && trainerEmail
+            ? baseGames.filter((game) => (game.trainerEmail || game.ownerEmail || "").toLowerCase() !== trainerEmail.toLowerCase())
+            : baseGames;
 
         let recommended = [];
         if (hasProfile && trainerEmail) {
@@ -86,7 +90,7 @@ export default function Home() {
           const userGames = ownSnapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
 
           recommended = getRecommendedGames({
-            games: baseGames,
+            games: filteredBaseGames,
             userGames,
             userLocation: location,
             maxResults: 6,
@@ -94,11 +98,11 @@ export default function Home() {
         }
 
         const recommendedIds = new Set(recommended.map((game) => game.id));
-        const distanceFiltered = filterGamesByDistance(baseGames, location, 30);
+        const distanceFiltered = filterGamesByDistance(filteredBaseGames, location, 30);
 
         let latest = distanceFiltered.filter((game) => !recommendedIds.has(game.id)).slice(0, 6);
         if (latest.length === 0) {
-          latest = baseGames.filter((game) => !recommendedIds.has(game.id)).slice(0, 6);
+          latest = filteredBaseGames.filter((game) => !recommendedIds.has(game.id)).slice(0, 6);
         }
 
         if (!cancelled) {
