@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - develop
+      - relaunch-ux-cards
       - feature/**
 
 jobs:
