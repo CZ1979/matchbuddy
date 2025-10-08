@@ -16,4 +16,4 @@ jobs:
           repoToken: "${{ secrets.GITHUB_TOKEN }}"
           firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_FRIENDLY_MATCH_FINDER_STAGING }}"
           channelId: live
-          projectId: matchbuddy-staging
+          projectId: friendly-match-finder-staging
