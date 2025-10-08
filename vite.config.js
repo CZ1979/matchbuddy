@@ -11,4 +11,9 @@ export default defineConfig({
       "react-swipeable": fileURLToPath(new URL("./src/utils/reactSwipeable.js", import.meta.url)),
     },
   },
+  test: {
+    environment: "jsdom",
+    setupFiles: "./src/tests/setup.js",
+    globals: true,
+  },
 });
