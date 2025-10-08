@@ -1,56 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
-import { Mail, MapPin, Navigation, MessageCircle, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { useUserLocation } from "../hooks/useUserLocation";
-
-function formatDateGerman(dateStr) {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  return isNaN(d)
-    ? dateStr
-    : d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
-
-const distanceKm = (lat1, lon1, lat2, lon2) => {
-  const R = 6371;
-  const toRad = (v) => (v * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-};
-
-const generateAgeGroups = () => {
-  const currentYear = new Date().getFullYear();
-  const list = [];
-  for (let age = 6; age <= 19; age++) {
-    const birthYear = currentYear - age;
-    list.push({ label: String(birthYear), value: String(birthYear) });
-  }
-  list.push(
-    { label: "Herren", value: "Herren" },
-    { label: "Damen", value: "Damen" },
-    { label: "Soma", value: "Soma" }
-  );
-  return list;
-};
-
-const normalizeAgeGroup = (value) => {
-  if (value == null) return "";
-  const str = value.toString();
-  const match = str.match(/^U(\d{1,2})/i);
-  if (match) {
-    const age = parseInt(match[1], 10);
-    if (!isNaN(age)) {
-      const currentYear = new Date().getFullYear();
-      return String(currentYear - age);
-    }
-  }
-  return str;
-};
+import GameCard from "../components/GameCard";
+import { generateAgeGroups, normalizeAgeGroup } from "../utils/ageGroups";
+import { calculateDistanceKm } from "../utils/distance";
+import { useSearchParams } from "react-router-dom";
 
 export default function Games() {
   const [games, setGames] = useState([]);
@@ -65,6 +21,8 @@ export default function Games() {
   const [isGeocoding, setIsGeocoding] = useState(false);
   const { location, updateLocation } = useUserLocation(true);
   const trainerProfile = JSON.parse(localStorage.getItem("trainerProfile") || "{}");
+  const [searchParams] = useSearchParams();
+  const highlightId = searchParams.get("highlight");
 
   useEffect(() => {
     setAgeGroups(generateAgeGroups());
@@ -131,43 +89,30 @@ export default function Games() {
         if (ageGroupValue !== filter.ageGroup) return false;
       }
       const strengthNum = Number(g.strength);
-      if (!isNaN(strengthNum) && strengthNum < filter.minStrength) return false;
+      if (!Number.isNaN(strengthNum) && strengthNum < filter.minStrength) return false;
 
-      if (center && typeof g.lat === "number" && typeof g.lng === "number") {
-        const d = distanceKm(center.lat, center.lng, g.lat, g.lng);
-        if (d > filter.radius) return false;
-      } else if (center && (g.lat == null || g.lng == null)) {
-        return false;
+      if (center && typeof center.lat === "number" && typeof center.lng === "number") {
+        if (g.lat == null || g.lng == null) return false;
+        const lat = typeof g.lat === "number" ? g.lat : Number(g.lat);
+        const lng = typeof g.lng === "number" ? g.lng : Number(g.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+        const dist = calculateDistanceKm(center.lat, center.lng, lat, lng);
+        if (dist == null || dist > filter.radius) return false;
       }
       return true;
     });
   }, [games, filter, center]);
 
-  const routeHref = (g) => {
-    const destination = [g.address, g.zip, g.city].filter(Boolean).join(", ");
-    if (destination) {
-      return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
-    }
-    if (typeof g.lat === "number" && typeof g.lng === "number") {
-      return `https://www.google.com/maps/dir/?api=1&destination=${g.lat},${g.lng}`;
-    }
-    return null;
-  };
-
-  const whatsappMessage = (g) => {
-    const date = formatDateGerman(g.date);
-    let text = `Hallo! Sucht ihr noch einen Gegner für euer Spiel am ${date}? Wir hätten Interesse!`;
-    const first = trainerProfile.firstName || "";
-    const last = trainerProfile.lastName || "";
-    const club = trainerProfile.club || "";
-    const namePart = [first, last].filter(Boolean).join(" ");
-    if (namePart || club) {
-      text += `\n\nViele Grüße`;
-      if (namePart) text += `,\n${namePart}`;
-      if (club) text += `\n${club}`;
-    }
-    return encodeURIComponent(text);
-  };
+  useEffect(() => {
+    if (!highlightId || typeof window === "undefined") return undefined;
+    const timeout = window.setTimeout(() => {
+      const el = document.getElementById(`game-${highlightId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 250);
+    return () => window.clearTimeout(timeout);
+  }, [highlightId, filtered]);
 
   return (
     <div className="p-4">
@@ -286,96 +231,18 @@ export default function Games() {
             <p className="text-sm text-neutral-500">Keine Spiele gefunden.</p>
           )}
 
-          <ul className="divide-y divide-base-200">
-            {filtered.map((g) => {
-              const phoneRaw = (g.contactPhone || "").trim();
-              let displayPhone = phoneRaw;
-              if (displayPhone.startsWith("0049")) displayPhone = "+" + displayPhone.slice(2);
-              else if (displayPhone.startsWith("0")) displayPhone = "+49" + displayPhone.slice(1);
-              else if (!displayPhone.startsWith("+")) displayPhone = "+" + displayPhone;
-              const phoneForWhatsApp = encodeURIComponent(displayPhone);
-              const route = routeHref(g);
-
-              let distanceText = "";
-              if (
-                center &&
-                typeof g.lat === "number" &&
-                typeof g.lng === "number" &&
-                typeof center.lat === "number"
-              ) {
-                const dist = distanceKm(center.lat, center.lng, g.lat, g.lng);
-                distanceText = `~${Math.round(dist)} km entfernt`;
-              }
-
-              const normalizedGroup = normalizeAgeGroup(g.ageGroup);
-
-              return (
-                <li
-                  key={g.id}
-                  className="py-4 flex flex-col sm:flex-row sm:justify-between gap-2"
-                >
-                  <div>
-                    <div className="font-semibold">
-                      {formatDateGerman(g.date)} {g.time && `• ${g.time}`}{" "}
-                      {normalizedGroup && `• ${normalizedGroup}`}{" "}
-                      {g.strength && (
-                        <span className="text-xs text-primary ml-1">
-                          💪 Stärke: {g.strength}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-sm text-base-content/80">
-                      {g.ownerClub && <span>{g.ownerClub}</span>}
-                      {g.ownerName && <span> — {g.ownerName}</span>}
-                    </div>
-
-                    {(g.address || g.city || g.zip) && (
-                      <div className="text-xs text-neutral-500 mt-1 flex flex-col sm:flex-row sm:items-center gap-1">
-                        <div className="flex items-center gap-1">
-                          <MapPin size={14} className="text-primary" />
-                          {[g.address, g.zip, g.city].filter(Boolean).join(", ")}
-                        </div>
-                        {distanceText && (
-                          <span className="text-xs text-neutral-500 sm:ml-2">
-                            📍 {distanceText}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex flex-row gap-2 items-start sm:mt-0">
-                    {g.contactEmail && (
-                      <a href={`mailto:${g.contactEmail}`} className="btn btn-sm btn-primary">
-                        <Mail size={16} />
-                      </a>
-                    )}
-                    {phoneRaw && (
-                      <a
-                        href={`https://wa.me/${phoneForWhatsApp}?text=${whatsappMessage(g)}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn btn-sm btn-success"
-                        title={`WhatsApp öffnen (${displayPhone})`}
-                      >
-                        <MessageCircle size={16} />
-                      </a>
-                    )}
-                    {route && (
-                      <a
-                        href={route}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn btn-sm btn-outline"
-                      >
-                        <Navigation size={16} />
-                      </a>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="grid gap-4">
+            {filtered.map((g) => (
+              <GameCard
+                key={g.id}
+                game={g}
+                viewerProfile={trainerProfile}
+                viewerLocation={center}
+                anchorId={`game-${g.id}`}
+                isHighlighted={highlightId === g.id}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>
