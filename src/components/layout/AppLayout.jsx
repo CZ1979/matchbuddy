@@ -16,9 +16,8 @@ export default function AppLayout() {
       <header className="sticky top-0 z-30 border-b border-emerald-100/70 bg-white/80 backdrop-blur">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between px-4 py-3">
           <Link to="/feed" className="flex items-center gap-2 text-lg font-semibold text-emerald-600">
-            <img src={logo} alt="MatchBuddy" className="h-9 w-auto" />
-            <span className="hidden text-base text-slate-700 sm:inline">MatchBuddy</span>
-          </Link>
+            <img src={logo} alt="MatchBuddy" className="h-32 w-auto" />
+            </Link>
           <div className="flex items-center gap-2">
             <Link
               to="/neues-spiel"
