@@ -1,46 +1,69 @@
-🧩 Codex Prompt: MatchBuddy Experience Upgrade
+## 🧩 MatchBuddy – Experience Upgrade (Startseite & Profil UX)
 
-Ziel: Verbesserung der User Experience nach MVP
-→ Fokus auf Startseite, Matching-Logik, Profil-Speichern-Flow und Hinweis bei fehlendem Profil.
+### 🎯 Ziel
 
-1️⃣ Startseite: Neueste & passende Spiele (Swipe-Kacheln)
+Verbesserung der User Experience nach MVP:
 
-Zweck:
-Besucher (auch ohne Profil oder Login) sollen direkt aktuelle Spiele sehen.
+* Mehr Sichtbarkeit und Dynamik auf der Startseite
+* Bessere Orientierung nach dem ersten Profil-Save
+* Klarheit bei fehlendem Profil
+* Grundstein für spätere, datengetriebene Matching-Logik
 
-Funktionale Anforderungen:
+---
 
-Zeige Swipe-/Kartenansicht mit 3–6 Spiel-Kacheln.
+## 1️⃣ **Startseite: Neueste & passende Spiele (Swipe-Kacheln)**
 
-Jede Karte nutzt das bestehende GameCard-Design aus Games.jsx (inkl. Route, WhatsApp etc.).
+### Zweck
 
-Kein Klick auf einzelne Karten.
+Neue Besucher (auch ohne Login) sollen direkt Spiele sehen und Lust bekommen, zu interagieren.
 
-Stattdessen ein einziger Button „Alle Spiele anzeigen“, der auf Games.jsx führt.
+### Funktionale Anforderungen
 
-Kein Login erforderlich.
+* Zeige **Swipe-/Kartenansicht** mit 3–6 Spiel-Kacheln.
+* Jede Karte nutzt das bestehende Game-Card-Design aus der „Games-Übersicht“:
 
-Datenlogik:
+  * Verein / Ort
+  * Datum & Uhrzeit
+  * Altersklasse
+  * Buttons für **Route**, **WhatsApp**, **Details ansehen**
+* Karten können horizontal durchgeswiped oder via Pfeile gewechselt werden.
+* Kein Login erforderlich.
+* Kein Klick auf einzelne Karten.
+* Unterhalb ein Button **„Alle Spiele anzeigen“**, der auf `Games.jsx` führt.
 
-orderBy('createdAt', 'desc')
-limit(6)
+### Datenlogik
 
+1. **Basis-Query:**
 
-Wenn navigator.geolocation aktiv → filtere nach Entfernung (Radius max. 30 km).
+   ```js
+   orderBy('createdAt', 'desc')
+   limit(6)
+   ```
+2. **Geolokalisierung:**
 
-Wenn Geolocation nicht möglich → optional IP-Fallback, sonst einfach alle neuesten Spiele.
+   * Versuche `navigator.geolocation`.
+   * Fallback: IP-basierte Ortserkennung (optional).
+   * Wenn beides fehlschlägt → zeige einfach alle neuesten Spiele (keine Filter).
+3. **Sortierung nach Entfernung:**
+   Wenn Koordinaten verfügbar → berechne Distanz zu jedem Spiel (Haversine).
 
-UI-Hinweis (wenn kein Standort):
+### UI-Hinweis
 
-„Wir zeigen dir die neuesten Spiele – aktiviere deinen Standort, um Spiele in deiner Nähe zu sehen.“
+Wenn keine Geo-Location aktiv:
 
-2️⃣ Empfohlene Spiele (Matching-Algorithmus)
+> „Wir zeigen dir die neuesten Spiele – aktiviere Standort, um Spiele in deiner Nähe zu sehen.“
 
-Ziel:
-Empfiehl Spiele basierend auf Profildaten + eigenen Spiel-Einträgen.
+---
 
-Algorithmus (Pseudocode):
+## 2️⃣ **Empfohlene Spiele (Matching-Algorithmus)**
 
+### Ziel
+
+Nutzer sehen automatisch relevante Spiele basierend auf ihren eigenen Profildaten und bisherigen Einträgen.
+
+### Algorithmus-Logik (Pseudocode)
+
+```js
 user = {
   ageGroup,
   location: { lat, lon },
@@ -55,10 +78,10 @@ filtered = games.filter(g =>
   (g.ageGroup === younger && user.strengthEstimate === 'high')
 )
 
-// 2. Radius dynamisch erhöhen falls zu wenige Treffer
-if (filtered.length < 3) radius += 10 // max 50 km
+// 2. Entfernung (Radius dynamisch)
+if (filtered.length < 3) increase radius by 10km (max 50)
 
-// 3. Stärkeabgleich (basierend auf eigenen Spiel-Einträgen)
+// 3. Stärke-Abgleich
 filtered = filtered.filter(g => 
   abs(g.estimatedStrength - user.strengthEstimate) <= 1
 )
@@ -68,84 +91,114 @@ filtered.forEach(g => {
   g.score = (1 / g.distance) * 0.5 + (strength_match * 0.3) + (timeProximity * 0.2)
 })
 
-// 5. Sortieren & top 5 anzeigen
+// 5. Sortierung & Auswahl
 recommended = sortByScoreDesc(filtered).slice(0, 5)
+```
 
+### Darstellung
 
-Darstellung:
+* Gleiche Kartenstruktur wie bei Punkt 1.
+* Kombination mit Punkt 1:
 
-Gleiche Karten wie in Punkt 1
+  * Wenn passende Spiele gefunden → zuerst diese zeigen.
+  * Wenn keine passenden gefunden → fallback auf „neueste Spiele“.
 
-Kombination:
+### UI-Text
 
-Wenn passende Spiele gefunden → zeige diese zuerst
+> 🧭 „Diese Spiele passen zu deinem Profil“
+> ✳️ „Neueste Spiele in deiner Nähe“
 
-Wenn keine passenden → fallback auf neueste Spiele
+---
 
-UI-Text:
+## 3️⃣ **UX nach Profil speichern**
 
-🧭 „Diese Spiele passen zu deinem Profil“
-✳️ „Neueste Spiele in deiner Nähe“
+### Ziel
 
-3️⃣ UX nach Profil speichern
+Klarer nächster Schritt und positives Feedback nach dem Anlegen des Profils.
 
-Ziel:
-Klarer nächster Schritt nach Speichern.
+### Flow
 
-Flow:
 Nach Klick auf „Profil speichern“:
 
-Toast: „✅ Profil erfolgreich gespeichert!“
+1. **Toast:** „✅ Profil erfolgreich gespeichert!“
+2. **Direkter Redirect** mit zwei Buttons:
 
-Redirect mit zwei Buttons:
+   ```
+   Profil gespeichert!
+   👉 Jetzt neues Spiel anlegen
+   🔍 Oder Spiel suchen
+   ```
 
-Profil gespeichert!
-👉 Jetzt neues Spiel anlegen
-🔍 Oder Spiel suchen
+   * Button 1 → `/NewGame`
+   * Button 2 → `/Games.jsx`
 
+### Psychologie
 
-Button 1 → /NewGame
+Nutzer bekommt das Gefühl von Fortschritt und Belohnung.
 
-Button 2 → /Games.jsx
+---
 
-4️⃣ Kein Profil vorhanden – Spiele anlegen deaktiviert
+## 4️⃣ **Kein Profil vorhanden – Spiele anlegen deaktiviert**
 
-Ziel:
-Klarer Hinweis, warum Spiel anlegen nicht funktioniert.
+### Ziel
 
-Verhalten:
+Klar kommunizieren, warum etwas nicht funktioniert.
 
-Nur „Spiel anlegen“ ist ausgegraut.
+### Verhalten
 
-„Spiele suchen“ bleibt aktiv.
+* Nur **„Spiel anlegen“** ist ausgegraut.
+* **„Spiele suchen“** bleibt aktiv.
+* Beispiel:
 
-Unter dem ausgegrauten Button:
+  ```
+  ⚠️ Bitte lege zuerst dein Profil an, um Spiele zu erstellen.
+  [Profil jetzt anlegen]
+  ```
 
-⚠️ Bitte lege zuerst dein Profil an, um Spiele zu erstellen.
-[Profil jetzt anlegen]
+---
 
-5️⃣ Technische Hinweise
+## 5️⃣ **Technische Hinweise für Implementierung**
 
-Datenquellen:
+### Datenquellen
 
-Firestore Collections: profiles, games
+* `profiles` (Firestore Collection)
+* `games` (Firestore Collection)
+* Nutzung von `createdAt`, `lat`, `lon`, `ageGroup`
+* Optionale Hilfsfunktion `avg_strength_from_user_created_games()`
 
-Felder: createdAt, lat, lon, ageGroup
+### Komponenten
 
-Hilfsfunktion: avg_strength_from_user_created_games()
+* `GameCard` → Basis-Card mit Route/WhatsApp/Details
+* `GameCarousel` → horizontales Scroll/Swipe-Element
+* `RecommendationEngine.js` → Matching-Algorithmus
+* `ProfileSaveFlow.js` → UX nach Profil-Speichern
 
-Komponenten:
+### UI-Framework
 
-GameCard – bestehendes Layout (Route, WhatsApp etc.)
+* React mit Tailwind / Material
+* Swipe mit `react-swipeable` oder `keen-slider`
+* Toast mit `react-hot-toast` oder ähnlichem
 
-GameCarousel – Swipe/Scroll Container (react-swipeable / keen-slider)
+---
 
-RecommendationEngine.js – Matching-Algorithmus
+### 💻 Hinweis für Implementierung
 
-ProfileSaveFlow.js – UX nach Profil-Save
+**Anforderungen:**
 
-Framework:
+* Nutze bestehende Komponenten, wo möglich.
+* Saubere, modulare Architektur.
+* Kommentiere neuen Code für bessere Lesbarkeit.
+* Alle neuen Dateien in `/components` oder `/utils` ablegen.
 
-React + TailwindCSS
+**Frameworks & Tools:**
 
-Toasts mit react-hot-toast oder ähnlich
+* React + TailwindCSS
+* Firestore (collections: `profiles`, `games`)
+* `react-hot-toast` für Notifications
+* `keen-slider` oder `react-swipeable` für Swipe-Karussells
+
+**Output-Erwartung:**
+
+* Lauffähiger React-Code
+* Alle neuen/angepassten Dateien vollständig ausgeben
+* Integration in bestehende Komponenten (z. B. Home.jsx, Games.jsx) explizit dokumentieren
