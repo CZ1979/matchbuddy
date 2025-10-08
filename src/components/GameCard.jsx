@@ -1,4 +1,5 @@
 import clsx from "clsx";
+<<<<<<< HEAD
 import {
   CalendarDays,
   Clock,
@@ -10,11 +11,17 @@ import {
   Trophy,
   Users,
 } from "lucide-react";
+=======
+import { CalendarDays, Clock, MapPin, Navigation } from "lucide-react";
+>>>>>>> relaunch-ux-cards
 import OverflowMenu from "./OverflowMenu";
 import { buildGoogleMapsRouteUrl } from "../lib/maps";
 import { formatDateGerman } from "../utils/date";
 import { buildWhatsAppUrl } from "../lib/whatsapp";
+<<<<<<< HEAD
 import { normalizeAgeGroup } from "../utils/ageGroups";
+=======
+>>>>>>> relaunch-ux-cards
 
 const toDistanceLabel = (distanceKm) => {
   if (typeof distanceKm !== "number" || Number.isNaN(distanceKm)) return "";
@@ -51,6 +58,7 @@ const buildContactMessage = (game, profile) => {
   return lines.join("\n");
 };
 
+<<<<<<< HEAD
 const buildEmailLink = (game, profile) => {
   if (!game?.contactEmail) return "";
   const params = new URLSearchParams({
@@ -86,6 +94,19 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
   const ageGroupLabel = game.ageGroup ? normalizeAgeGroup(game.ageGroup) : "";
   const strengthLabel = resolveStrengthLabel(game.strength);
 
+=======
+export default function GameCard({ game, viewerProfile, onDetails, onAction, isSaved = false }) {
+  const badgeLabel = resolveBadge(game);
+  const dateLabel = game.date ? formatDateGerman(game.date) : "Datum folgt";
+  const distanceLabel = toDistanceLabel(game.distanceKm);
+  const whatsappUrl = buildWhatsAppUrl({
+    phone: game.contactPhone,
+    message: buildContactMessage(game, viewerProfile),
+  });
+  const hasContact = Boolean(whatsappUrl);
+  const mapsUrl = buildGoogleMapsRouteUrl({ address: game.address, zip: game.zip, city: game.city });
+
+>>>>>>> relaunch-ux-cards
   const infoChips = [
     {
       label: dateLabel,
@@ -98,6 +119,7 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
           icon: <Clock size={14} />,
         }
       : null,
+<<<<<<< HEAD
     ageGroupLabel
       ? {
           label: ageGroupLabel,
@@ -110,15 +132,22 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
           icon: <Trophy size={14} />,
         }
       : null,
+=======
+>>>>>>> relaunch-ux-cards
   ].filter(Boolean);
 
   return (
     <article
       className={clsx(
+<<<<<<< HEAD
         "relative overflow-hidden rounded-3xl p-5 shadow-lg shadow-emerald-100/70 ring-1 ring-emerald-100 transition",
         isSaved
           ? "bg-emerald-50/80 ring-2 ring-emerald-400 shadow-emerald-200"
           : "bg-white hover:shadow-xl hover:shadow-emerald-100/90"
+=======
+        "relative overflow-hidden rounded-3xl bg-white p-5 shadow-lg shadow-emerald-100/70 ring-1 ring-emerald-100",
+        isSaved && "ring-2 ring-emerald-400 shadow-emerald-200/80"
+>>>>>>> relaunch-ux-cards
       )}
     >
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600" />
@@ -160,7 +189,11 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
         ))}
       </div>
 
+<<<<<<< HEAD
       <div className="mt-6 flex flex-wrap gap-2 text-xs sm:text-sm">
+=======
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+>>>>>>> relaunch-ux-cards
         <a
           href={hasContact ? whatsappUrl : undefined}
           target="_blank"
@@ -168,12 +201,17 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
           aria-disabled={!hasContact}
           tabIndex={hasContact ? undefined : -1}
           className={clsx(
+<<<<<<< HEAD
             "inline-flex flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 font-semibold transition",
+=======
+            "inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition sm:flex-1",
+>>>>>>> relaunch-ux-cards
             hasContact
               ? "bg-emerald-500 text-white shadow-sm hover:bg-emerald-600"
               : "cursor-not-allowed bg-slate-200 text-slate-400"
           )}
         >
+<<<<<<< HEAD
           <MessageCircle size={16} /> WhatsApp
         </a>
         {emailUrl && (
@@ -184,12 +222,20 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
             <Mail size={16} /> E-Mail
           </a>
         )}
+=======
+          Kontakt aufnehmen
+        </a>
+>>>>>>> relaunch-ux-cards
         {mapsUrl && (
           <a
             href={mapsUrl}
             target="_blank"
             rel="noreferrer"
+<<<<<<< HEAD
             className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-slate-200 px-3 py-2 font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600"
+=======
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 sm:flex-1"
+>>>>>>> relaunch-ux-cards
           >
             <Navigation size={16} /> Route
           </a>
@@ -197,9 +243,15 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
         <button
           type="button"
           onClick={() => onDetails?.(game)}
+<<<<<<< HEAD
           className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-slate-200 px-3 py-2 font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600"
         >
           <Info size={16} /> Mehr Details
+=======
+          className="inline-flex w-full items-center justify-center rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 sm:flex-1"
+        >
+          Mehr Details
+>>>>>>> relaunch-ux-cards
         </button>
       </div>
     </article>

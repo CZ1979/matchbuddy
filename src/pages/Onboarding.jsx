@@ -7,7 +7,10 @@ import { useProfile } from "../hooks/useProfile";
 const toInitialValues = (profile) => ({
   name: profile?.fullName || [profile?.firstName, profile?.lastName].filter(Boolean).join(" ") || "",
   club: profile?.club || "",
+<<<<<<< HEAD
   email: profile?.email || "",
+=======
+>>>>>>> relaunch-ux-cards
   city: profile?.city || "",
   phone: profile?.phone || "",
   rememberData: profile?.rememberData !== false,
@@ -43,7 +46,11 @@ export default function Onboarding() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-100 via-white to-emerald-50 px-4 py-12">
       <div className="w-full max-w-xl rounded-3xl bg-white/90 p-8 shadow-xl shadow-emerald-100/80">
         <header className="space-y-5 text-center">
+<<<<<<< HEAD
           <img src={logo} alt="MatchBuddy" className="mx-auto h-12 w-auto" />
+=======
+          <img src={logo} alt="MatchBuddy" className="mx-auto h-30 w-auto" />
+>>>>>>> relaunch-ux-cards
           <h1 className="text-3xl font-semibold text-slate-900">Erstell dein Trainerprofil</h1>
           <p className="text-base text-slate-600">
             Damit wir dir passende Spiele in deiner Nähe zeigen können.

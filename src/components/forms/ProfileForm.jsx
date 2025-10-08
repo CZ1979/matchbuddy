@@ -1,5 +1,8 @@
+<<<<<<< HEAD
 import { MessageCircle, Phone } from "lucide-react";
 
+=======
+>>>>>>> relaunch-ux-cards
 const formatPhoneInput = (value) => value.replace(/[^+\d\s]/g, "");
 
 export default function ProfileForm({ values, onChange, onSubmit, isSaving }) {
@@ -48,6 +51,7 @@ export default function ProfileForm({ values, onChange, onSubmit, isSaving }) {
       </div>
 
       <div className="space-y-2">
+<<<<<<< HEAD
         <label className="block text-sm font-medium text-slate-700" htmlFor="profile-email">
           E-Mail-Adresse
         </label>
@@ -64,6 +68,8 @@ export default function ProfileForm({ values, onChange, onSubmit, isSaving }) {
       </div>
 
       <div className="space-y-2">
+=======
+>>>>>>> relaunch-ux-cards
         <label className="block text-sm font-medium text-slate-700" htmlFor="profile-city">
           Ort
         </label>
@@ -79,6 +85,7 @@ export default function ProfileForm({ values, onChange, onSubmit, isSaving }) {
       </div>
 
       <div className="space-y-2">
+<<<<<<< HEAD
         <div className="flex items-center justify-between text-sm font-medium text-slate-700" id="profile-phone-label">
           <span>Telefonnummer</span>
           <span className="text-xs font-normal text-slate-400">für WhatsApp-Anfragen</span>
@@ -100,6 +107,19 @@ export default function ProfileForm({ values, onChange, onSubmit, isSaving }) {
         <p className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-2 text-xs text-emerald-700">
           <MessageCircle size={14} /> WhatsApp-Links funktionieren nur mit internationalem Format inkl. +49.
         </p>
+=======
+        <label className="block text-sm font-medium text-slate-700" htmlFor="profile-phone">
+          Telefon (optional)
+        </label>
+        <input
+          id="profile-phone"
+          type="tel"
+          placeholder="z. B. +49 170 1234567"
+          value={values.phone}
+          onChange={(event) => updateField("phone", formatPhoneInput(event.target.value))}
+          className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+        />
+>>>>>>> relaunch-ux-cards
       </div>
 
       <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">

@@ -72,6 +72,7 @@ const sortByUpcomingDate = (games) => {
   });
 };
 
+<<<<<<< HEAD
 const matchesOwnEmail = (game, ownEmails) => {
   if (!game || !ownEmails || ownEmails.size === 0) return false;
   const candidates = [
@@ -86,6 +87,8 @@ const matchesOwnEmail = (game, ownEmails) => {
   });
 };
 
+=======
+>>>>>>> relaunch-ux-cards
 export function useGamesQuery({ profile, viewerLocation, filters = {} }) {
   const [games, setGames] = useState([]);
   const [profileGames, setProfileGames] = useState([]);
@@ -162,6 +165,7 @@ export function useGamesQuery({ profile, viewerLocation, filters = {} }) {
     return Array.from(map.values());
   }, [legacyGames, profileGames]);
 
+<<<<<<< HEAD
   const ownEmails = useMemo(() => {
     const list = [];
     if (profile?.email) list.push(profile.email.trim().toLowerCase());
@@ -169,6 +173,8 @@ export function useGamesQuery({ profile, viewerLocation, filters = {} }) {
     return new Set(list.filter(Boolean));
   }, [profile?.email, profile?.id]);
 
+=======
+>>>>>>> relaunch-ux-cards
   const activeLocation = useMemo(() => {
     if (viewerLocation && typeof viewerLocation.lat === "number") return viewerLocation;
     if (profile?.location && typeof profile.location.lat === "number") {
@@ -192,6 +198,7 @@ export function useGamesQuery({ profile, viewerLocation, filters = {} }) {
     const filteredRecommended = applyFilters(recommended, {
       ...filters,
       location: activeLocation,
+<<<<<<< HEAD
     }).filter((game) => !ownIds.has(game.id) && !matchesOwnEmail(game, ownEmails));
     const filteredBase = applyFilters(distanceAware, {
       ...filters,
@@ -199,6 +206,15 @@ export function useGamesQuery({ profile, viewerLocation, filters = {} }) {
     }).filter((game) => !ownIds.has(game.id) && !matchesOwnEmail(game, ownEmails));
     return sortByUpcomingDate(mergeRecommended(filteredRecommended, filteredBase));
   }, [activeLocation, combinedUserGames, filters, games, ownEmails, profile]);
+=======
+    }).filter((game) => !ownIds.has(game.id));
+    const filteredBase = applyFilters(distanceAware, {
+      ...filters,
+      location: activeLocation,
+    }).filter((game) => !ownIds.has(game.id));
+    return sortByUpcomingDate(mergeRecommended(filteredRecommended, filteredBase));
+  }, [activeLocation, combinedUserGames, filters, games, profile]);
+>>>>>>> relaunch-ux-cards
 
   return {
     games: enrichedGames,

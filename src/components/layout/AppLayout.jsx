@@ -1,9 +1,15 @@
+<<<<<<< HEAD
 import { useState } from "react";
+=======
+>>>>>>> relaunch-ux-cards
 import clsx from "clsx";
 import { PlusCircle, UserRound } from "lucide-react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import logo from "../../assets/logo.svg";
+<<<<<<< HEAD
 import FeedbackModal from "../FeedbackModal";
+=======
+>>>>>>> relaunch-ux-cards
 
 const navItems = [
   { href: "/feed", label: "Feed" },
@@ -12,16 +18,24 @@ const navItems = [
 
 export default function AppLayout() {
   const location = useLocation();
+<<<<<<< HEAD
   const [isFeedbackOpen, setFeedbackOpen] = useState(false);
+=======
+>>>>>>> relaunch-ux-cards
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-white text-slate-900">
       <header className="sticky top-0 z-30 border-b border-emerald-100/70 bg-white/80 backdrop-blur">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between px-4 py-3">
           <Link to="/feed" className="flex items-center gap-2 text-lg font-semibold text-emerald-600">
+<<<<<<< HEAD
             <img src={logo} alt="MatchBuddy" className="h-9 w-auto" />
             <span className="hidden text-base text-slate-700 sm:inline">MatchBuddy</span>
           </Link>
+=======
+            <img src={logo} alt="MatchBuddy" className="h-32 w-auto" />
+            </Link>
+>>>>>>> relaunch-ux-cards
           <div className="flex items-center gap-2">
             <Link
               to="/neues-spiel"
@@ -65,6 +79,7 @@ export default function AppLayout() {
       </main>
 
       <footer className="border-t border-emerald-100 bg-white/80 py-6 text-center text-sm text-slate-500">
+<<<<<<< HEAD
         <p>© {new Date().getFullYear()} MatchBuddy · Spiele smarter organisieren</p>
         <p className="mt-1 flex items-center justify-center gap-2">
           <a className="hover:text-emerald-600" href="/privacy.html">
@@ -81,6 +96,17 @@ export default function AppLayout() {
         </p>
       </footer>
       <FeedbackModal open={isFeedbackOpen} onClose={() => setFeedbackOpen(false)} />
+=======
+        <p>
+          © {new Date().getFullYear()} MatchBuddy · Spiele smarter organisieren
+        </p>
+        <p className="mt-1">
+          <a className="hover:text-emerald-600" href="/privacy.html">
+            Datenschutzerklärung
+          </a>
+        </p>
+      </footer>
+>>>>>>> relaunch-ux-cards
     </div>
   );
 }

@@ -69,7 +69,11 @@ const mapLegacyProfile = (profile, profileId) => {
     fullName,
     club: profile.club || "",
     phone: profile.phone || "",
+<<<<<<< HEAD
     email: profile.email || profile.contactEmail || profileId || "",
+=======
+    email: profile.email || "",
+>>>>>>> relaunch-ux-cards
     ageGroup: profile.ageGroup || "",
     city: profile.city || profile.locationLabel || "",
     rememberData:
@@ -92,12 +96,16 @@ const readFromStorage = () => {
     localStorage.getItem(LEGACY_EMAIL_KEY) ||
     "";
 
+<<<<<<< HEAD
   const storedEmail = localStorage.getItem(LEGACY_EMAIL_KEY) || storedProfile?.email || "";
 
   const profile = mapLegacyProfile(storedProfile, storedId);
   if (profile && !profile.email && storedEmail) {
     profile.email = storedEmail;
   }
+=======
+  const profile = mapLegacyProfile(storedProfile, storedId);
+>>>>>>> relaunch-ux-cards
   const completedFlag = localStorage.getItem(PROFILE_COMPLETED_KEY);
   const profileCompleted = completedFlag === "true" || Boolean(profile);
 
@@ -119,10 +127,13 @@ export function ProfileProvider({ children }) {
     localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(nextProfile));
     if (nextProfile?.id) {
       localStorage.setItem(PROFILE_ID_KEY, nextProfile.id);
+<<<<<<< HEAD
     }
     if (nextProfile?.email) {
       localStorage.setItem(LEGACY_EMAIL_KEY, nextProfile.email);
     } else if (nextProfile?.id) {
+=======
+>>>>>>> relaunch-ux-cards
       localStorage.setItem(LEGACY_EMAIL_KEY, nextProfile.id);
     }
     localStorage.setItem(PROFILE_COMPLETED_KEY, "true");
@@ -149,7 +160,10 @@ export function ProfileProvider({ children }) {
           fullName: data.fullName || [data.firstName, data.lastName].filter(Boolean).join(" "),
           club: data.club || "",
           phone: data.phone || "",
+<<<<<<< HEAD
           email: data.email || data.contactEmail || data.trainerEmail || targetId || "",
+=======
+>>>>>>> relaunch-ux-cards
           ageGroup: data.ageGroup || "",
           city: data.city || "",
           rememberData: data.rememberData !== false,
@@ -171,14 +185,21 @@ export function ProfileProvider({ children }) {
 
   const saveProfile = useCallback(
     async (input, { geocode = true } = {}) => {
+<<<<<<< HEAD
       if (!input || !input.name || !input.club || !input.city || !input.email || !input.phone) {
+=======
+      if (!input || !input.name || !input.club || !input.city) {
+>>>>>>> relaunch-ux-cards
         throw new Error("Profil unvollständig");
       }
 
       setIsSaving(true);
       try {
         const trimmedName = input.name.trim();
+<<<<<<< HEAD
         const trimmedEmail = input.email.trim().toLowerCase();
+=======
+>>>>>>> relaunch-ux-cards
         const [firstName, ...rest] = trimmedName.split(/\s+/);
         const lastName = rest.join(" ");
         const normalizedPhone = normalizePhoneNumber(input.phone || "");
@@ -187,7 +208,11 @@ export function ProfileProvider({ children }) {
           typeof globalThis.crypto.randomUUID === "function"
             ? globalThis.crypto.randomUUID()
             : Math.random().toString(36).slice(2);
+<<<<<<< HEAD
         const id = profile?.id || profileId || trimmedEmail || generatedId;
+=======
+        const id = profile?.id || profileId || generatedId;
+>>>>>>> relaunch-ux-cards
 
         let lat = input.location?.lat ?? profile?.location?.lat ?? null;
         let lng = input.location?.lng ?? profile?.location?.lng ?? null;
@@ -206,7 +231,11 @@ export function ProfileProvider({ children }) {
           fullName: trimmedName,
           club: input.club.trim(),
           phone: normalizedPhone,
+<<<<<<< HEAD
           email: trimmedEmail,
+=======
+          email: profile?.email || "",
+>>>>>>> relaunch-ux-cards
           ageGroup: profile?.ageGroup || "",
           city: input.city.trim(),
           rememberData: input.rememberData !== false,
@@ -238,6 +267,10 @@ export function ProfileProvider({ children }) {
     },
     [
       persistProfile,
+<<<<<<< HEAD
+=======
+      profile?.email,
+>>>>>>> relaunch-ux-cards
       profile?.ageGroup,
       profile?.id,
       profile?.location?.lat,
