@@ -1,7 +1,7 @@
 import clsx from "clsx";
-import { CalendarDays, Clock, MapPin, UserRound, Users } from "lucide-react";
+import { CalendarDays, Clock, MapPin, Navigation } from "lucide-react";
 import OverflowMenu from "./OverflowMenu";
-import { normalizeAgeGroup } from "../utils/ageGroups";
+import { buildGoogleMapsRouteUrl } from "../lib/maps";
 import { formatDateGerman } from "../utils/date";
 import { buildWhatsAppUrl } from "../lib/whatsapp";
 
@@ -42,7 +42,6 @@ const buildContactMessage = (game, profile) => {
 
 export default function GameCard({ game, viewerProfile, onDetails, onAction, isSaved = false }) {
   const badgeLabel = resolveBadge(game);
-  const normalizedAgeGroup = normalizeAgeGroup(game.ageGroup);
   const dateLabel = game.date ? formatDateGerman(game.date) : "Datum folgt";
   const distanceLabel = toDistanceLabel(game.distanceKm);
   const whatsappUrl = buildWhatsAppUrl({
@@ -50,6 +49,7 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
     message: buildContactMessage(game, viewerProfile),
   });
   const hasContact = Boolean(whatsappUrl);
+  const mapsUrl = buildGoogleMapsRouteUrl({ address: game.address, zip: game.zip, city: game.city });
 
   const infoChips = [
     {
@@ -61,18 +61,6 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
       ? {
           label: game.time,
           icon: <Clock size={14} />,
-        }
-      : null,
-    normalizedAgeGroup
-      ? {
-          label: normalizedAgeGroup,
-          icon: <Users size={14} />,
-        }
-      : null,
-    game.ownerName
-      ? {
-          label: game.ownerName,
-          icon: <UserRound size={14} />,
         }
       : null,
   ].filter(Boolean);
@@ -123,13 +111,7 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
         ))}
       </div>
 
-      {game.notes && (
-        <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-          {game.notes}
-        </p>
-      )}
-
-      <div className="mt-6 flex flex-wrap gap-3">
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
         <a
           href={hasContact ? whatsappUrl : undefined}
           target="_blank"
@@ -137,7 +119,7 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
           aria-disabled={!hasContact}
           tabIndex={hasContact ? undefined : -1}
           className={clsx(
-            "inline-flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition",
+            "inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition sm:flex-1",
             hasContact
               ? "bg-emerald-500 text-white shadow-sm hover:bg-emerald-600"
               : "cursor-not-allowed bg-slate-200 text-slate-400"
@@ -145,10 +127,20 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
         >
           Kontakt aufnehmen
         </a>
+        {mapsUrl && (
+          <a
+            href={mapsUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 sm:flex-1"
+          >
+            <Navigation size={16} /> Route
+          </a>
+        )}
         <button
           type="button"
           onClick={() => onDetails?.(game)}
-          className="inline-flex flex-1 items-center justify-center rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600"
+          className="inline-flex w-full items-center justify-center rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 sm:flex-1"
         >
           Mehr Details
         </button>

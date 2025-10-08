@@ -161,7 +161,7 @@ export function ProfileProvider({ children }) {
 
   const saveProfile = useCallback(
     async (input, { geocode = true } = {}) => {
-      if (!input || !input.name || !input.club || !input.ageGroup || !input.city) {
+      if (!input || !input.name || !input.club || !input.city) {
         throw new Error("Profil unvollständig");
       }
 
@@ -196,7 +196,7 @@ export function ProfileProvider({ children }) {
           club: input.club.trim(),
           phone: normalizedPhone,
           email: profile?.email || "",
-          ageGroup: input.ageGroup,
+          ageGroup: profile?.ageGroup || "",
           city: input.city.trim(),
           rememberData: input.rememberData !== false,
           location:
@@ -228,6 +228,7 @@ export function ProfileProvider({ children }) {
     [
       persistProfile,
       profile?.email,
+      profile?.ageGroup,
       profile?.id,
       profile?.location?.lat,
       profile?.location?.lng,

@@ -1,5 +1,7 @@
 import clsx from "clsx";
+import { PlusCircle, UserRound } from "lucide-react";
 import { Link, Outlet, useLocation } from "react-router-dom";
+import logo from "../../assets/logo.svg";
 
 const navItems = [
   { href: "/feed", label: "Feed" },
@@ -13,15 +15,24 @@ export default function AppLayout() {
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-white text-slate-900">
       <header className="sticky top-0 z-30 border-b border-emerald-100/70 bg-white/80 backdrop-blur">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between px-4 py-3">
-          <Link to="/feed" className="text-lg font-semibold text-emerald-600">
-            MatchBuddy
+          <Link to="/feed" className="flex items-center gap-2 text-lg font-semibold text-emerald-600">
+            <img src={logo} alt="MatchBuddy" className="h-9 w-auto" />
+            <span className="hidden text-base text-slate-700 sm:inline">MatchBuddy</span>
           </Link>
-          <nav className="hidden items-center gap-2 sm:flex">
-            {navItems.map((item) => {
-              const isActive = location.pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
+          <div className="flex items-center gap-2">
+            <Link
+              to="/neues-spiel"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-emerald-300 hover:text-emerald-600 sm:hidden"
+              aria-label="Spiel anlegen"
+            >
+              <PlusCircle size={18} />
+            </Link>
+            <nav className="hidden items-center gap-2 sm:flex">
+              {navItems.map((item) => {
+                const isActive = location.pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
                   to={item.href}
                   className={clsx(
                     "rounded-full px-4 py-2 text-sm font-medium transition",
@@ -32,9 +43,17 @@ export default function AppLayout() {
                 >
                   {item.label}
                 </Link>
-              );
-            })}
-          </nav>
+                );
+              })}
+            </nav>
+            <Link
+              to="/onboarding?edit=1"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-emerald-300 hover:text-emerald-600"
+              aria-label="Profil anpassen"
+            >
+              <UserRound size={18} />
+            </Link>
+          </div>
         </div>
       </header>
 

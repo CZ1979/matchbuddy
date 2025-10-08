@@ -59,6 +59,19 @@ const mergeRecommended = (recommended, base) => {
   return unique;
 };
 
+const sortByUpcomingDate = (games) => {
+  const toTimestamp = (value) => {
+    if (!value) return Number.POSITIVE_INFINITY;
+    const parsed = new Date(value).getTime();
+    return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
+  };
+  return [...games].sort((a, b) => {
+    const diff = toTimestamp(a.date) - toTimestamp(b.date);
+    if (diff !== 0) return diff;
+    return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
+  });
+};
+
 export function useGamesQuery({ profile, viewerLocation, filters = {} }) {
   const [games, setGames] = useState([]);
   const [profileGames, setProfileGames] = useState([]);
@@ -145,6 +158,7 @@ export function useGamesQuery({ profile, viewerLocation, filters = {} }) {
 
   const enrichedGames = useMemo(() => {
     if (games.length === 0) return [];
+    const ownIds = new Set(combinedUserGames.map((game) => game.id));
     const distanceAware = filterGamesByDistance(games, activeLocation, filters.radius || 25);
     const recommended = profile
       ? getRecommendedGames({
@@ -157,12 +171,12 @@ export function useGamesQuery({ profile, viewerLocation, filters = {} }) {
     const filteredRecommended = applyFilters(recommended, {
       ...filters,
       location: activeLocation,
-    });
+    }).filter((game) => !ownIds.has(game.id));
     const filteredBase = applyFilters(distanceAware, {
       ...filters,
       location: activeLocation,
-    });
-    return mergeRecommended(filteredRecommended, filteredBase);
+    }).filter((game) => !ownIds.has(game.id));
+    return sortByUpcomingDate(mergeRecommended(filteredRecommended, filteredBase));
   }, [activeLocation, combinedUserGames, filters, games, profile]);
 
   return {

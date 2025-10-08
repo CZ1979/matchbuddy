@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Filter, MapPin, RefreshCcw } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ExternalLink, Filter, MapPin, RefreshCcw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import GameCard from "../components/GameCard";
 import FilterSheet from "../components/FilterSheet";
@@ -9,6 +9,8 @@ import { useProfile } from "../hooks/useProfile";
 import { useUserLocation } from "../hooks/useUserLocation";
 import useGamesQuery from "../hooks/useGamesQuery";
 import { formatDateGerman } from "../utils/date";
+import { normalizeAgeGroup } from "../utils/ageGroups";
+import { buildGoogleMapsRouteUrl } from "../lib/maps";
 
 const DEFAULT_RADIUS = 25;
 
@@ -79,11 +81,12 @@ export default function Feed() {
     filters,
   });
 
-  useEffect(() => {
-    setFilters((prev) => ({ ...prev, ageGroup: profile?.ageGroup || "" }));
-  }, [profile?.ageGroup]);
-
   const locationLabel = profile?.city || (viewerLocation ? "deinem Standort" : "Deutschland");
+  const totalGames = games.length;
+  const selectedGameAgeGroup = selectedGame ? normalizeAgeGroup(selectedGame.ageGroup) : "";
+  const selectedGameRouteUrl = selectedGame
+    ? buildGoogleMapsRouteUrl({ address: selectedGame.address, zip: selectedGame.zip, city: selectedGame.city })
+    : "";
 
   const handleCardAction = async (action, game) => {
     if (!game) return;
@@ -101,14 +104,6 @@ export default function Feed() {
       case "share":
         await shareGame(game);
         break;
-      case "report": {
-        const subject = encodeURIComponent(`Spiel melden – ${game.ownerClub || game.id}`);
-        const body = encodeURIComponent(
-          `Hallo MatchBuddy-Team,%0D%0A%0D%0Aich möchte folgendes Spiel melden:%0D%0AID: ${game.id}%0D%0AVerein: ${game.ownerClub || "unbekannt"}.`
-        );
-        window.open(`mailto:support@matchbuddy.app?subject=${subject}&body=${body}`);
-        break;
-      }
       default:
         break;
     }
@@ -130,6 +125,15 @@ export default function Feed() {
             <h2 className="text-2xl font-semibold text-slate-900">Spiele in deiner Nähe</h2>
             <p className="mt-1 flex items-center gap-2 text-sm text-slate-600">
               <MapPin size={16} className="text-emerald-500" /> Basierend auf deinem Ort: {locationLabel}
+            </p>
+            <p className="mt-3 text-sm font-medium text-emerald-600">
+              {isLoadingGames
+                ? "Spiele werden geladen…"
+                : totalGames === 0
+                ? "Keine Spiele gefunden"
+                : totalGames === 1
+                ? "1 Spiel gefunden"
+                : `${totalGames} Spiele gefunden`}
             </p>
             {!viewerLocation && (
               <button
@@ -199,26 +203,48 @@ export default function Feed() {
         title={selectedGame ? selectedGame.ownerClub || "Spiel-Details" : "Spiel-Details"}
       >
         {selectedGame && (
-          <div className="space-y-3 text-sm text-slate-600">
-            <p>
-              <strong>Datum:</strong> {selectedGame.date ? formatDateGerman(selectedGame.date) : "tba"}
-            </p>
-            {selectedGame.time && (
+          <div className="space-y-4 text-sm text-slate-600">
+            <div className="space-y-2">
               <p>
-                <strong>Uhrzeit:</strong> {selectedGame.time}
+                <strong>Datum:</strong> {selectedGame.date ? formatDateGerman(selectedGame.date) : "tba"}
               </p>
-            )}
-            {selectedGame.city && (
+              {selectedGame.time && (
+                <p>
+                  <strong>Uhrzeit:</strong> {selectedGame.time}
+                </p>
+              )}
+              {selectedGameAgeGroup && (
+                <p>
+                  <strong>Altersklasse:</strong> {selectedGameAgeGroup}
+                </p>
+              )}
               <p>
-                <strong>Ort:</strong> {selectedGame.city}
+                <strong>Trainer:</strong> {selectedGame.ownerName || "Nicht angegeben"}
               </p>
+            </div>
+            {(selectedGame.address || selectedGame.city) && (
+              <div className="space-y-2">
+                <p>
+                  <strong>Ort:</strong> {[selectedGame.address, selectedGame.zip, selectedGame.city].filter(Boolean).join(", ")}
+                </p>
+                {selectedGameRouteUrl && (
+                  <a
+                    href={selectedGameRouteUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 text-sm font-medium text-emerald-600 hover:text-emerald-700"
+                  >
+                    <ExternalLink size={14} /> Route in Google Maps öffnen
+                  </a>
+                )}
+              </div>
             )}
             {selectedGame.notes && (
-              <p className="rounded-2xl bg-slate-50 px-4 py-3 text-slate-600">{selectedGame.notes}</p>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-400">Hinweise</p>
+                <p className="mt-1 rounded-2xl bg-slate-50 px-4 py-3 text-slate-600">{selectedGame.notes}</p>
+              </div>
             )}
-            <p>
-              <strong>Trainer:</strong> {selectedGame.ownerName || "Nicht angegeben"}
-            </p>
           </div>
         )}
       </BottomSheet>

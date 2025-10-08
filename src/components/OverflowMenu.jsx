@@ -4,7 +4,6 @@ import { MoreHorizontal } from "lucide-react";
 const actions = [
   { key: "save", label: "Merken" },
   { key: "share", label: "Teilen" },
-  { key: "report", label: "Melden" },
 ];
 
 export default function OverflowMenu({ onAction }) {

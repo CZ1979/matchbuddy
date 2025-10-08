@@ -1,11 +1,6 @@
-import { useMemo } from "react";
-import { generateAgeGroups } from "../../utils/ageGroups";
-
 const formatPhoneInput = (value) => value.replace(/[^+\d\s]/g, "");
 
 export default function ProfileForm({ values, onChange, onSubmit, isSaving }) {
-  const ageGroups = useMemo(() => generateAgeGroups(), []);
-
   const updateField = (field, value) => {
     onChange?.({ ...values, [field]: value });
   };
@@ -48,26 +43,6 @@ export default function ProfileForm({ values, onChange, onSubmit, isSaving }) {
           onChange={(event) => updateField("club", event.target.value)}
           className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
         />
-      </div>
-
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-slate-700" htmlFor="profile-ageGroup">
-          Altersklasse
-        </label>
-        <select
-          id="profile-ageGroup"
-          required
-          value={values.ageGroup}
-          onChange={(event) => updateField("ageGroup", event.target.value)}
-          className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
-        >
-          <option value="">Bitte wählen</option>
-          {ageGroups.map((group) => (
-            <option key={group.value} value={group.value}>
-              {group.label}
-            </option>
-          ))}
-        </select>
       </div>
 
       <div className="space-y-2">
