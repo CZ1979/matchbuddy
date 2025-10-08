@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 import logo from "../assets/logo.svg"; // ← Pfad prüfen
 import BottomNav from "./BottomNav";
 import FeedbackModal from "./FeedbackModal";
@@ -70,6 +71,7 @@ export default function Layout() {
       <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setFeedbackOpen(false)} />
 
       <BottomNav />
+      <Toaster position="top-center" />
     </div>
   );
 }
