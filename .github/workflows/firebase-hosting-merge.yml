@@ -18,6 +18,3 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_FRIENDLY_MATCH_FINDER_2FF7A }}
           channelId: live
           projectId: friendly-match-finder-2ff7a
-
-
-          
