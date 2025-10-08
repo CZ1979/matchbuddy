@@ -24,13 +24,43 @@ function formatDateGerman(dateStr) {
   });
 }
 
+const generateAgeGroups = () => {
+  const currentYear = new Date().getFullYear();
+  const list = [];
+  for (let age = 6; age <= 19; age++) {
+    const birthYear = currentYear - age;
+    list.push({ label: String(birthYear), value: String(birthYear) });
+  }
+  list.push(
+    { label: "Herren", value: "Herren" },
+    { label: "Damen", value: "Damen" },
+    { label: "Soma", value: "Soma" }
+  );
+  return list;
+};
+
+const normalizeAgeGroup = (value) => {
+  if (value == null) return "";
+  const str = value.toString();
+  const match = str.match(/^U(\d{1,2})/i);
+  if (match) {
+    const age = parseInt(match[1], 10);
+    if (!isNaN(age)) {
+      const currentYear = new Date().getFullYear();
+      return String(currentYear - age);
+    }
+  }
+  return str;
+};
+
 export default function NewGame() {
   const saved = JSON.parse(localStorage.getItem("newGameDefaults") || "{}");
+  const savedAgeGroup = normalizeAgeGroup(saved.ageGroup);
 
   const [newGame, setNewGame] = useState({
     date: "",
     time: "",
-    ageGroup: saved.ageGroup || "",
+    ageGroup: savedAgeGroup || "",
     strength: saved.strength || "5",
     locationType: saved.locationType || "home",
     address: saved.address || "",
@@ -48,15 +78,9 @@ export default function NewGame() {
   const [ageGroups, setAgeGroups] = useState([]);
   const { location, updateLocation, isLoading } = useUserLocation();
 
-  // 🧠 Altersklassen Dropdown (U6–U21)
+  // 🧠 Altersklassen Dropdown
   useEffect(() => {
-    const year = new Date().getFullYear();
-    const list = [];
-    for (let u = 6; u <= 21; u++) {
-      const birthYear = year - u;
-      list.push({ label: `U${u} / ${birthYear}`, value: `U${u}` });
-    }
-    setAgeGroups(list);
+    setAgeGroups(generateAgeGroups());
   }, []);
 
   // 🔄 Eingaben merken
@@ -152,6 +176,7 @@ export default function NewGame() {
       const ref = collection(db, "games");
       await addDoc(ref, {
         ...newGame,
+        ageGroup: normalizeAgeGroup(newGame.ageGroup),
         lat,
         lng,
         ownerName: `${trainerProfile.firstName || ""} ${trainerProfile.lastName || ""}`.trim(),
@@ -339,35 +364,39 @@ export default function NewGame() {
           )}
 
           <ul className="divide-y divide-base-200">
-            {myGames.map((g) => (
-              <li
-                key={g.id}
-                className="py-3 flex flex-col sm:flex-row sm:justify-between gap-2"
-              >
-                <div>
-                  <div className="font-medium">
-                    {formatDateGerman(g.date)} {g.time && `• ${g.time}`}{" "}
-                    {g.ageGroup && `• ${g.ageGroup}`}
-                  </div>
-                  <div className="text-sm text-base-content/70">
-                    {g.ownerClub && `${g.ownerClub} — `}
-                    {g.ownerName}
-                  </div>
-                  {g.address && (
-                    <div className="text-xs text-neutral-500">
-                      {g.address}, {g.zip} {g.city}
-                    </div>
-                  )}
-                </div>
+            {myGames.map((g) => {
+              const normalizedGroup = normalizeAgeGroup(g.ageGroup);
 
-                <button
-                  onClick={() => handleDelete(g.id)}
-                  className="btn btn-sm btn-outline btn-error"
+              return (
+                <li
+                  key={g.id}
+                  className="py-3 flex flex-col sm:flex-row sm:justify-between gap-2"
                 >
-                  🗑️ Löschen
-                </button>
-              </li>
-            ))}
+                  <div>
+                    <div className="font-medium">
+                      {formatDateGerman(g.date)} {g.time && `• ${g.time}`}{" "}
+                      {normalizedGroup && `• ${normalizedGroup}`}
+                    </div>
+                    <div className="text-sm text-base-content/70">
+                      {g.ownerClub && `${g.ownerClub} — `}
+                      {g.ownerName}
+                    </div>
+                    {g.address && (
+                      <div className="text-xs text-neutral-500">
+                        {g.address}, {g.zip} {g.city}
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => handleDelete(g.id)}
+                    className="btn btn-sm btn-outline btn-error"
+                  >
+                    🗑️ Löschen
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </div>
       </div>
