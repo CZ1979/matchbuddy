@@ -13,6 +13,7 @@ import { normalizePhoneNumber } from "../lib/whatsapp";
 
 const PROFILE_STORAGE_KEY = "trainerProfile";
 const PROFILE_ID_KEY = "trainerProfileId";
+const PROFILE_EMAIL_KEY = "trainerProfileEmail";
 const PROFILE_COMPLETED_KEY = "profileCompleted";
 const LEGACY_EMAIL_KEY = "trainerEmail";
 
@@ -56,20 +57,26 @@ const geocodeCity = async (city) => {
   return { lat: null, lng: null };
 };
 
-const mapLegacyProfile = (profile, profileId) => {
+const normalizeEmail = (value = "") => value.trim().toLowerCase();
+
+const mapLegacyProfile = (profile, profileId, storedEmail = "") => {
   if (!profile) return null;
   const firstName = profile.firstName || profile.name?.split(" ")[0] || "";
   const remaining = profile.lastName || profile.name?.split(" ").slice(1).join(" ") || "";
   const nameParts = [firstName, remaining].filter(Boolean);
   const fullName = nameParts.length > 0 ? nameParts.join(" ") : profile.name || "";
+  const resolvedEmail = (profile.email || storedEmail || profileId || "").trim();
+  const normalizedEmail = profile.emailNormalized || normalizeEmail(resolvedEmail || profileId);
+  const resolvedId = profile.id || profileId || resolvedEmail || "";
   return {
-    id: profile.id || profileId || "",
+    id: resolvedId,
     firstName,
     lastName: remaining,
     fullName,
     club: profile.club || "",
     phone: profile.phone || "",
-    email: profile.email || "",
+    email: resolvedEmail,
+    emailNormalized: normalizedEmail,
     ageGroup: profile.ageGroup || "",
     city: profile.city || profile.locationLabel || "",
     rememberData:
@@ -86,13 +93,19 @@ const readFromStorage = () => {
   }
 
   const storedProfile = parseJson(localStorage.getItem(PROFILE_STORAGE_KEY));
+  const storedEmail =
+    localStorage.getItem(PROFILE_EMAIL_KEY) ||
+    storedProfile?.email ||
+    localStorage.getItem(LEGACY_EMAIL_KEY) ||
+    "";
   const storedId =
     localStorage.getItem(PROFILE_ID_KEY) ||
     storedProfile?.id ||
+    storedEmail ||
     localStorage.getItem(LEGACY_EMAIL_KEY) ||
     "";
 
-  const profile = mapLegacyProfile(storedProfile, storedId);
+  const profile = mapLegacyProfile(storedProfile, storedId, storedEmail);
   const completedFlag = localStorage.getItem(PROFILE_COMPLETED_KEY);
   const profileCompleted = completedFlag === "true" || Boolean(profile);
 
@@ -114,7 +127,10 @@ export function ProfileProvider({ children }) {
     localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(nextProfile));
     if (nextProfile?.id) {
       localStorage.setItem(PROFILE_ID_KEY, nextProfile.id);
-      localStorage.setItem(LEGACY_EMAIL_KEY, nextProfile.id);
+    }
+    if (nextProfile?.email) {
+      localStorage.setItem(PROFILE_EMAIL_KEY, nextProfile.email);
+      localStorage.setItem(LEGACY_EMAIL_KEY, nextProfile.email);
     }
     localStorage.setItem(PROFILE_COMPLETED_KEY, "true");
     setProfileState({
@@ -140,6 +156,8 @@ export function ProfileProvider({ children }) {
           fullName: data.fullName || [data.firstName, data.lastName].filter(Boolean).join(" "),
           club: data.club || "",
           phone: data.phone || "",
+          email: data.email || "",
+          emailNormalized: data.emailNormalized || normalizeEmail(data.email || targetId),
           ageGroup: data.ageGroup || "",
           city: data.city || "",
           rememberData: data.rememberData !== false,
@@ -161,7 +179,7 @@ export function ProfileProvider({ children }) {
 
   const saveProfile = useCallback(
     async (input, { geocode = true } = {}) => {
-      if (!input || !input.name || !input.club || !input.city) {
+      if (!input || !input.name || !input.club || !input.city || !input.email || !input.phone) {
         throw new Error("Profil unvollständig");
       }
 
@@ -171,12 +189,14 @@ export function ProfileProvider({ children }) {
         const [firstName, ...rest] = trimmedName.split(/\s+/);
         const lastName = rest.join(" ");
         const normalizedPhone = normalizePhoneNumber(input.phone || "");
+        const trimmedEmail = input.email.trim();
+        const normalizedEmail = normalizeEmail(trimmedEmail);
         const generatedId =
           typeof globalThis.crypto !== "undefined" &&
           typeof globalThis.crypto.randomUUID === "function"
             ? globalThis.crypto.randomUUID()
             : Math.random().toString(36).slice(2);
-        const id = profile?.id || profileId || generatedId;
+        const id = profile?.id || profileId || normalizedEmail || generatedId;
 
         let lat = input.location?.lat ?? profile?.location?.lat ?? null;
         let lng = input.location?.lng ?? profile?.location?.lng ?? null;
@@ -195,7 +215,8 @@ export function ProfileProvider({ children }) {
           fullName: trimmedName,
           club: input.club.trim(),
           phone: normalizedPhone,
-          email: profile?.email || "",
+          email: trimmedEmail,
+          emailNormalized: normalizedEmail,
           ageGroup: profile?.ageGroup || "",
           city: input.city.trim(),
           rememberData: input.rememberData !== false,
@@ -213,6 +234,7 @@ export function ProfileProvider({ children }) {
           rememberData: nextProfile.rememberData,
           location: nextProfile.location,
           email: nextProfile.email,
+          emailNormalized: nextProfile.emailNormalized,
           updatedAt: serverTimestamp(),
         };
 
@@ -227,7 +249,6 @@ export function ProfileProvider({ children }) {
     },
     [
       persistProfile,
-      profile?.email,
       profile?.ageGroup,
       profile?.id,
       profile?.location?.lat,
