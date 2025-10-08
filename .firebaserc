@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "friendly-match-finder-2ff7a"
+    "default": "friendly-match-finder-2ff7a",
+    "staging": "friendly-match-finder-staging"
   }
 }
