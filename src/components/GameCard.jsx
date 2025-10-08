@@ -1,157 +1,150 @@
-// src/components/GameCard.jsx
-// Reusable presentation card for games used on the games list and home carousel.
-
 import clsx from "clsx";
-import { Mail, MapPin, MessageCircle, Navigation, Info } from "lucide-react";
+import { CalendarDays, Clock, MapPin, Navigation } from "lucide-react";
+import OverflowMenu from "./OverflowMenu";
+import { buildGoogleMapsRouteUrl } from "../lib/maps";
 import { formatDateGerman } from "../utils/date";
-import { calculateDistanceKm } from "../utils/distance";
-import { normalizeAgeGroup } from "../utils/ageGroups";
+import { buildWhatsAppUrl } from "../lib/whatsapp";
 
-const toNumber = (value) => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
+const toDistanceLabel = (distanceKm) => {
+  if (typeof distanceKm !== "number" || Number.isNaN(distanceKm)) return "";
+  if (distanceKm < 1) return "< 1 km entfernt";
+  return `~${Math.round(distanceKm)} km entfernt`;
 };
 
-const buildRouteHref = (game) => {
-  const destination = [game.address, game.zip, game.city].filter(Boolean).join(", ");
-  if (destination) {
-    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+const resolveBadge = (game) => {
+  if (!game) return "Gegner gesucht";
+  if (typeof game.matchType === "string") {
+    if (game.matchType.toLowerCase().includes("freund")) return "Freundschaftsspiel";
   }
-  const lat = toNumber(game.lat);
-  const lng = toNumber(game.lng);
-  if (lat != null && lng != null) {
-    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-  }
-  return null;
+  if (game.notes && /freundschaft/i.test(game.notes)) return "Freundschaftsspiel";
+  return "Gegner gesucht";
 };
 
-const computeDistance = (game, viewerLocation) => {
-  if (typeof game.distanceKm === "number") return game.distanceKm;
-  if (!viewerLocation) return null;
-  const lat = toNumber(game.lat);
-  const lng = toNumber(game.lng);
-  if (lat == null || lng == null) return null;
-  return calculateDistanceKm(viewerLocation.lat, viewerLocation.lng, lat, lng);
-};
-
-const formatPhone = (value) => {
-  if (!value) return { display: "", whatsapp: "" };
-  let phone = value.trim();
-  if (phone.startsWith("0049")) phone = "+" + phone.slice(2);
-  else if (phone.startsWith("0") && !phone.startsWith("+49")) phone = "+49" + phone.slice(1);
-  else if (!phone.startsWith("+")) phone = "+" + phone;
-  return {
-    display: phone,
-    whatsapp: encodeURIComponent(phone),
-  };
-};
-
-const buildWhatsappMessage = (game, viewerProfile = {}) => {
-  const date = formatDateGerman(game.date);
-  let message = `Hallo! Sucht ihr noch einen Gegner für euer Spiel am ${date}? Wir hätten Interesse!`;
-  const first = viewerProfile.firstName || "";
-  const last = viewerProfile.lastName || "";
-  const club = viewerProfile.club || "";
-  const name = [first, last].filter(Boolean).join(" ");
-
-  if (name || club) {
-    message += "\n\nViele Grüße";
-    if (name) message += `,\n${name}`;
-    if (club) message += `\n${club}`;
-  }
-
-  return encodeURIComponent(message);
-};
-
-export default function GameCard({
-  game,
-  viewerProfile,
-  viewerLocation,
-  variant = "list",
-  anchorId,
-  isHighlighted = false,
-  className,
-  showDetailsButton = true,
-}) {
-  const dateText = formatDateGerman(game.date);
-  const normalizedGroup = normalizeAgeGroup(game.ageGroup);
-  const distance = computeDistance(game, viewerLocation);
-  const distanceText =
-    typeof distance === "number" ? `~${Math.round(distance)} km entfernt` : "";
-
-  const routeHref = buildRouteHref(game);
-  const { display: phoneDisplay, whatsapp: phoneWhatsapp } = formatPhone(
-    game.contactPhone
+const buildContactMessage = (game, profile) => {
+  if (!game) return "";
+  const date = game.date ? formatDateGerman(game.date) : "";
+  const time = game.time ? ` um ${game.time}` : "";
+  const location = game.city ? ` in ${game.city}` : "";
+  const lines = [];
+  const ownerFirstName = game.ownerName ? game.ownerName.split(" ")[0] : "";
+  lines.push(`Hallo${ownerFirstName ? ` ${ownerFirstName}` : ""}!`);
+  lines.push(
+    `wir haben euer Gesuch für ${game.ownerClub || "euer Team"}${location} am ${date}${time} gesehen und hätten Interesse an einem Match.`
   );
+  if (profile?.fullName || profile?.club) {
+    lines.push("");
+    lines.push("Viele Grüße");
+    if (profile.fullName) lines.push(profile.fullName);
+    if (profile.club) lines.push(profile.club);
+  }
+  return lines.join("\n");
+};
 
-  const detailHref = game.id ? `/spiele?highlight=${encodeURIComponent(game.id)}` : "/spiele";
+export default function GameCard({ game, viewerProfile, onDetails, onAction, isSaved = false }) {
+  const badgeLabel = resolveBadge(game);
+  const dateLabel = game.date ? formatDateGerman(game.date) : "Datum folgt";
+  const distanceLabel = toDistanceLabel(game.distanceKm);
+  const whatsappUrl = buildWhatsAppUrl({
+    phone: game.contactPhone,
+    message: buildContactMessage(game, viewerProfile),
+  });
+  const hasContact = Boolean(whatsappUrl);
+  const mapsUrl = buildGoogleMapsRouteUrl({ address: game.address, zip: game.zip, city: game.city });
 
-  const containerClass = clsx(
-    "rounded-2xl border border-base-200 bg-base-100 p-4 shadow-sm transition",
-    "flex flex-col gap-3",
-    variant === "carousel" && "h-full",
-    isHighlighted && "border-primary shadow-lg ring-1 ring-primary/40",
-    className
-  );
+  const infoChips = [
+    {
+      label: dateLabel,
+      icon: <CalendarDays size={14} />,
+      highlight: true,
+    },
+    game.time
+      ? {
+          label: game.time,
+          icon: <Clock size={14} />,
+        }
+      : null,
+  ].filter(Boolean);
 
   return (
-    <div id={anchorId} className={containerClass}>
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-          <span>{dateText}</span>
-          {game.time && <span>• {game.time}</span>}
-          {normalizedGroup && <span>• {normalizedGroup}</span>}
-          {game.strength && (
-            <span className="text-primary">💪 Stärke: {game.strength}</span>
-          )}
+    <article
+      className={clsx(
+        "relative overflow-hidden rounded-3xl bg-white p-5 shadow-lg shadow-emerald-100/70 ring-1 ring-emerald-100",
+        isSaved && "ring-2 ring-emerald-400 shadow-emerald-200/80"
+      )}
+    >
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600" />
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-600">
+            {badgeLabel}
+          </span>
+          <h3 className="mt-3 text-xl font-semibold text-slate-900">
+            {game.ownerClub || "Unbekannter Verein"}
+          </h3>
+          <p className="mt-1 flex items-center gap-1 text-sm text-slate-500">
+            <MapPin size={16} className="text-emerald-500" />
+            {[game.city, game.zip].filter(Boolean).join(" ")}
+            {distanceLabel && (
+              <span className="ml-2 text-xs font-medium text-emerald-600">{distanceLabel}</span>
+            )}
+          </p>
         </div>
-
-        {(game.ownerClub || game.ownerName) && (
-          <div className="text-sm text-base-content/80">
-            {game.ownerClub && <span>{game.ownerClub}</span>}
-            {game.ownerName && <span> — {game.ownerName}</span>}
-          </div>
-        )}
-
-        {(game.address || game.city || game.zip) && (
-          <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-500">
-            <span className="flex items-center gap-1">
-              <MapPin size={14} className="text-primary" />
-              {[game.address, game.zip, game.city].filter(Boolean).join(", ")}
-            </span>
-            {distanceText && <span className="text-neutral-500">📍 {distanceText}</span>}
-          </div>
-        )}
+        <OverflowMenu
+          onAction={(action) => {
+            onAction?.(action, game);
+          }}
+        />
       </div>
 
-      <div className="mt-auto flex flex-wrap gap-2">
-        {game.contactEmail && (
-          <a href={`mailto:${game.contactEmail}`} className="btn btn-sm btn-primary">
-            <Mail size={16} />
-          </a>
-        )}
-        {phoneDisplay && (
+      <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600">
+        {infoChips.map((chip, index) => (
+          <span
+            key={`${chip.label}-${index}`}
+            className={clsx(
+              "inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1",
+              chip.highlight && "bg-emerald-50 text-emerald-700"
+            )}
+          >
+            {chip.icon}
+            <span>{chip.label}</span>
+          </span>
+        ))}
+      </div>
+
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <a
+          href={hasContact ? whatsappUrl : undefined}
+          target="_blank"
+          rel="noreferrer"
+          aria-disabled={!hasContact}
+          tabIndex={hasContact ? undefined : -1}
+          className={clsx(
+            "inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition sm:flex-1",
+            hasContact
+              ? "bg-emerald-500 text-white shadow-sm hover:bg-emerald-600"
+              : "cursor-not-allowed bg-slate-200 text-slate-400"
+          )}
+        >
+          Kontakt aufnehmen
+        </a>
+        {mapsUrl && (
           <a
-            href={`https://wa.me/${phoneWhatsapp}?text=${buildWhatsappMessage(game, viewerProfile)}`}
+            href={mapsUrl}
             target="_blank"
             rel="noreferrer"
-            className="btn btn-sm btn-success"
-            title={`WhatsApp öffnen (${phoneDisplay})`}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 sm:flex-1"
           >
-            <MessageCircle size={16} />
+            <Navigation size={16} /> Route
           </a>
         )}
-        {routeHref && (
-          <a href={routeHref} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline">
-            <Navigation size={16} />
-          </a>
-        )}
-        {showDetailsButton && (
-          <a href={detailHref} className="btn btn-sm btn-outline">
-            <Info size={16} /> Details
-          </a>
-        )}
+        <button
+          type="button"
+          onClick={() => onDetails?.(game)}
+          className="inline-flex w-full items-center justify-center rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 sm:flex-1"
+        >
+          Mehr Details
+        </button>
       </div>
-    </div>
+    </article>
   );
 }
