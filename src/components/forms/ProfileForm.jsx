@@ -61,28 +61,36 @@ export default function ProfileForm({ values, onChange, onSubmit, isSaving }) {
       </div>
 
       <div className="space-y-2">
+        <label className="block text-sm font-medium text-slate-700" htmlFor="profile-email">
+          E-Mail-Adresse
+        </label>
+        <input
+          id="profile-email"
+          type="email"
+          required
+          autoComplete="email"
+          placeholder="trainer@verein.de"
+          value={values.email}
+          onChange={(event) => updateField("email", event.target.value)}
+          className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+        />
+      </div>
+
+      <div className="space-y-2">
         <label className="block text-sm font-medium text-slate-700" htmlFor="profile-phone">
-          Telefon (optional)
+          Telefon (für WhatsApp)
         </label>
         <input
           id="profile-phone"
           type="tel"
+          required
           placeholder="z. B. +49 170 1234567"
           value={values.phone}
           onChange={(event) => updateField("phone", formatPhoneInput(event.target.value))}
           className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
         />
+        <p className="text-xs text-slate-500">Wir nutzen die Nummer für die WhatsApp-Kontaktaufnahme.</p>
       </div>
-
-      <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
-        <input
-          type="checkbox"
-          checked={values.rememberData}
-          onChange={(event) => updateField("rememberData", event.target.checked)}
-          className="h-4 w-4 rounded border-slate-300 text-emerald-500 focus:ring-emerald-500"
-        />
-        <span>Daten merken</span>
-      </label>
 
       <button
         type="submit"

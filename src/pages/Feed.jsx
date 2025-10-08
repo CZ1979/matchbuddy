@@ -11,6 +11,7 @@ import useGamesQuery from "../hooks/useGamesQuery";
 import { formatDateGerman } from "../utils/date";
 import { normalizeAgeGroup } from "../utils/ageGroups";
 import { buildGoogleMapsRouteUrl } from "../lib/maps";
+import { geocodePlace } from "../lib/geocode";
 
 const DEFAULT_RADIUS = 25;
 
@@ -65,15 +66,22 @@ export default function Feed() {
   const { location: geoLocation, isLoading: isLocating, updateLocation } = useUserLocation(false);
 
   const [filters, setFilters] = useState({
-    date: "",
-    ageGroup: profile?.ageGroup || "",
+    ageGroup: "",
     radius: DEFAULT_RADIUS,
+    manualCity: "",
+    location: null,
+    locationLabel: "",
   });
   const [isFilterOpen, setFilterOpen] = useState(false);
   const [selectedGame, setSelectedGame] = useState(null);
   const [savedIds, setSavedIds] = useState(loadSavedGameIds);
+  const [filterError, setFilterError] = useState("");
+  const [isGeocodingLocation, setIsGeocodingLocation] = useState(false);
 
-  const viewerLocation = useMemo(() => geoLocation || profile?.location || null, [geoLocation, profile?.location]);
+  const viewerLocation = useMemo(
+    () => filters.location || geoLocation || profile?.location || null,
+    [filters.location, geoLocation, profile?.location]
+  );
 
   const { games, isLoading: isLoadingGames, error } = useGamesQuery({
     profile,
@@ -81,7 +89,7 @@ export default function Feed() {
     filters,
   });
 
-  const locationLabel = profile?.city || (viewerLocation ? "deinem Standort" : "Deutschland");
+  const locationLabel = filters.locationLabel || profile?.city || (viewerLocation ? "deinem Standort" : "Deutschland");
   const totalGames = games.length;
   const selectedGameAgeGroup = selectedGame ? normalizeAgeGroup(selectedGame.ageGroup) : "";
   const selectedGameRouteUrl = selectedGame
@@ -109,12 +117,46 @@ export default function Feed() {
     }
   };
 
-  const handleApplyFilters = (next) => {
-    setFilters(next);
+  const handleApplyFilters = async (next) => {
+    const manualCity = (next.manualCity || "").trim();
+    setFilterError("");
+
+    if (manualCity) {
+      setIsGeocodingLocation(true);
+      const geo = await geocodePlace(manualCity);
+      setIsGeocodingLocation(false);
+      const hasGeo = typeof geo.lat === "number" && typeof geo.lng === "number";
+      setFilters((prev) => ({
+        ...prev,
+        ...next,
+        manualCity,
+        location: hasGeo ? geo : prev.location,
+        locationLabel: hasGeo ? manualCity : prev.locationLabel,
+      }));
+      if (!hasGeo) {
+        setFilterError("Der eingegebene Ort konnte nicht gefunden werden.");
+      }
+      return;
+    }
+
+    setFilters((prev) => ({
+      ...prev,
+      ...next,
+      manualCity: "",
+      location: null,
+      locationLabel: "",
+    }));
   };
 
   const handleResetFilters = () => {
-    setFilters({ date: "", ageGroup: profile?.ageGroup || "", radius: DEFAULT_RADIUS });
+    setFilterError("");
+    setFilters({
+      ageGroup: "",
+      radius: DEFAULT_RADIUS,
+      manualCity: "",
+      location: null,
+      locationLabel: "",
+    });
   };
 
   return (
@@ -146,6 +188,12 @@ export default function Feed() {
             )}
             {isLocating && (
               <p className="mt-2 text-xs text-slate-500">Standort wird ermittelt…</p>
+            )}
+            {isGeocodingLocation && (
+              <p className="mt-2 text-xs text-slate-500">Eingegebener Ort wird gesucht…</p>
+            )}
+            {filterError && (
+              <p className="mt-2 text-xs text-red-600">{filterError}</p>
             )}
           </div>
           <button

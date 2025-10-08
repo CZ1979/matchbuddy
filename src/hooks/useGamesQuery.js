@@ -24,10 +24,9 @@ const mapSnapshotDocs = (snapshot) =>
 
 const applyFilters = (games, filters = {}) => {
   if (!Array.isArray(games)) return [];
-  const { date = "", ageGroup = "", location = null, radius = 25 } = filters;
+  const { ageGroup = "", location = null, radius = 25 } = filters;
 
   return games.filter((game) => {
-    if (date && game.date && game.date < date) return false;
     if (ageGroup) {
       const normalized = normalizeAgeGroup(game.ageGroup);
       if (normalized !== ageGroup) return false;
@@ -76,6 +75,7 @@ export function useGamesQuery({ profile, viewerLocation, filters = {} }) {
   const [games, setGames] = useState([]);
   const [profileGames, setProfileGames] = useState([]);
   const [legacyGames, setLegacyGames] = useState([]);
+  const [emailGames, setEmailGames] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -138,15 +138,28 @@ export function useGamesQuery({ profile, viewerLocation, filters = {} }) {
     };
   }, [profile?.id]);
 
+  useEffect(() => {
+    const normalizedEmail = profile?.emailNormalized || profile?.email?.trim().toLowerCase() || "";
+    if (!normalizedEmail) {
+      setEmailGames([]);
+      return () => undefined;
+    }
+    const q = query(collection(db, "games"), where("trainerEmail", "==", normalizedEmail));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setEmailGames(mapSnapshotDocs(snapshot));
+    });
+    return () => unsubscribe();
+  }, [profile?.email, profile?.emailNormalized]);
+
   const combinedUserGames = useMemo(() => {
     const map = new Map();
-    [...profileGames, ...legacyGames].forEach((game) => {
+    [...profileGames, ...legacyGames, ...emailGames].forEach((game) => {
       if (!map.has(game.id)) {
         map.set(game.id, game);
       }
     });
     return Array.from(map.values());
-  }, [legacyGames, profileGames]);
+  }, [emailGames, legacyGames, profileGames]);
 
   const activeLocation = useMemo(() => {
     if (viewerLocation && typeof viewerLocation.lat === "number") return viewerLocation;
@@ -159,6 +172,34 @@ export function useGamesQuery({ profile, viewerLocation, filters = {} }) {
   const enrichedGames = useMemo(() => {
     if (games.length === 0) return [];
     const ownIds = new Set(combinedUserGames.map((game) => game.id));
+    const ownEmails = new Set();
+    combinedUserGames.forEach((game) => {
+      if (typeof game.contactEmail === "string") {
+        ownEmails.add(game.contactEmail.trim().toLowerCase());
+      }
+      if (typeof game.contactEmailNormalized === "string") {
+        ownEmails.add(game.contactEmailNormalized.trim().toLowerCase());
+      }
+      if (typeof game.trainerEmail === "string") {
+        ownEmails.add(game.trainerEmail.trim().toLowerCase());
+      }
+    });
+    const normalizedProfileEmail = profile?.emailNormalized || profile?.email?.trim().toLowerCase() || "";
+    if (normalizedProfileEmail) {
+      ownEmails.add(normalizedProfileEmail);
+    }
+    const isOwnGame = (game) => {
+      if (!game) return false;
+      if (ownIds.has(game.id)) return true;
+      const contactEmail = typeof game.contactEmail === "string" ? game.contactEmail.trim().toLowerCase() : "";
+      if (contactEmail && ownEmails.has(contactEmail)) return true;
+      const contactEmailNormalized =
+        typeof game.contactEmailNormalized === "string" ? game.contactEmailNormalized.trim().toLowerCase() : "";
+      if (contactEmailNormalized && ownEmails.has(contactEmailNormalized)) return true;
+      const trainerEmail = typeof game.trainerEmail === "string" ? game.trainerEmail.trim().toLowerCase() : "";
+      if (trainerEmail && ownEmails.has(trainerEmail)) return true;
+      return false;
+    };
     const distanceAware = filterGamesByDistance(games, activeLocation, filters.radius || 25);
     const recommended = profile
       ? getRecommendedGames({
@@ -171,11 +212,11 @@ export function useGamesQuery({ profile, viewerLocation, filters = {} }) {
     const filteredRecommended = applyFilters(recommended, {
       ...filters,
       location: activeLocation,
-    }).filter((game) => !ownIds.has(game.id));
+    }).filter((game) => !isOwnGame(game));
     const filteredBase = applyFilters(distanceAware, {
       ...filters,
       location: activeLocation,
-    }).filter((game) => !ownIds.has(game.id));
+    }).filter((game) => !isOwnGame(game));
     return sortByUpcomingDate(mergeRecommended(filteredRecommended, filteredBase));
   }, [activeLocation, combinedUserGames, filters, games, profile]);
 

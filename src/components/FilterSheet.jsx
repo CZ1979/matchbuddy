@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 import BottomSheet from "./layout/BottomSheet";
 import { generateAgeGroups } from "../utils/ageGroups";
 
 const radiusOptions = [10, 25, 50];
-const defaultFilters = { date: "", ageGroup: "", radius: 25 };
+const defaultFilters = { ageGroup: "", radius: 25, manualCity: "" };
 
 export default function FilterSheet({ open, filters = {}, onClose, onApply, onReset }) {
   const [draft, setDraft] = useState({ ...defaultFilters, ...filters });
@@ -46,14 +46,16 @@ export default function FilterSheet({ open, filters = {}, onClose, onApply, onRe
       <div className="space-y-4">
         <label className="block text-sm font-medium text-slate-600">
           <span className="mb-1 flex items-center gap-2 text-slate-700">
-            <CalendarDays size={16} /> Datum ab
+            <MapPin size={16} /> Ort für die Suche
           </span>
           <input
-            type="date"
+            type="text"
+            placeholder="z. B. Berlin"
             className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
-            value={draft.date || ""}
-            onChange={(event) => setDraft((prev) => ({ ...prev, date: event.target.value }))}
+            value={draft.manualCity || ""}
+            onChange={(event) => setDraft((prev) => ({ ...prev, manualCity: event.target.value }))}
           />
+          <p className="mt-1 text-xs text-slate-500">Optional: Überschreibt den Standort aus deinem Profil oder GPS.</p>
         </label>
 
         <label className="block text-sm font-medium text-slate-600">
@@ -95,7 +97,7 @@ export default function FilterSheet({ open, filters = {}, onClose, onApply, onRe
           </div>
           <p className="flex items-center gap-2 text-xs text-slate-500">
             <MapPin size={14} />
-            Wir zeigen dir Spiele im Umkreis zu deinem Profil-Ort.
+            Wir nutzen deinen Profil-Ort, GPS-Standort oder den eingegebenen Ort als Mittelpunkt.
           </p>
         </fieldset>
       </div>

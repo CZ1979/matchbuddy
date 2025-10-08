@@ -64,11 +64,14 @@ export default function AppLayout() {
         <p>
           © {new Date().getFullYear()} MatchBuddy · Spiele smarter organisieren
         </p>
-        <p className="mt-1">
+        <div className="mt-2 flex items-center justify-center gap-4">
+          <Link className="hover:text-emerald-600" to="/feedback">
+            Feedback
+          </Link>
           <a className="hover:text-emerald-600" href="/privacy.html">
             Datenschutzerklärung
           </a>
-        </p>
+        </div>
       </footer>
     </div>
   );

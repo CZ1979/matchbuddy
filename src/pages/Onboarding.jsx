@@ -8,8 +8,8 @@ const toInitialValues = (profile) => ({
   name: profile?.fullName || [profile?.firstName, profile?.lastName].filter(Boolean).join(" ") || "",
   club: profile?.club || "",
   city: profile?.city || "",
+  email: profile?.email || profile?.id || "",
   phone: profile?.phone || "",
-  rememberData: profile?.rememberData !== false,
 });
 
 export default function Onboarding() {
