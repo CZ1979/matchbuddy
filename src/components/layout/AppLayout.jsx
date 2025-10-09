@@ -1,11 +1,11 @@
 import clsx from "clsx";
-import { PlusCircle, UserRound } from "lucide-react";
+import { Home, Trophy, UserRound } from "lucide-react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import logo from "../../assets/logo.svg";
 
 const navItems = [
-  { href: "/feed", label: "Feed" },
-  { href: "/neues-spiel", label: "Spiel anlegen" },
+  { href: "/feed", label: "Feed", icon: Home },
+  { href: "/neues-spiel", label: "Meine Spiele", icon: Trophy },
 ];
 
 export default function AppLayout() {
@@ -20,11 +20,28 @@ export default function AppLayout() {
             </Link>
           <div className="flex items-center gap-2">
             <Link
-              to="/neues-spiel"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-emerald-300 hover:text-emerald-600 sm:hidden"
-              aria-label="Spiel anlegen"
+              to="/feed"
+              className={clsx(
+                "inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 transition sm:hidden",
+                location.pathname === "/feed"
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-600"
+                  : "text-slate-500 hover:border-emerald-300 hover:text-emerald-600"
+              )}
+              aria-label="Feed"
             >
-              <PlusCircle size={18} />
+              <Home size={18} />
+            </Link>
+            <Link
+              to="/neues-spiel"
+              className={clsx(
+                "inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 transition sm:hidden",
+                location.pathname === "/neues-spiel"
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-600"
+                  : "text-slate-500 hover:border-emerald-300 hover:text-emerald-600"
+              )}
+              aria-label="Meine Spiele"
+            >
+              <Trophy size={18} />
             </Link>
             <nav className="hidden items-center gap-2 sm:flex">
               {navItems.map((item) => {
@@ -32,16 +49,17 @@ export default function AppLayout() {
                 return (
                   <Link
                     key={item.href}
-                  to={item.href}
-                  className={clsx(
-                    "rounded-full px-4 py-2 text-sm font-medium transition",
-                    isActive
-                      ? "bg-emerald-100 text-emerald-700 shadow-sm"
-                      : "text-slate-500 hover:bg-emerald-50 hover:text-emerald-600"
-                  )}
-                >
-                  {item.label}
-                </Link>
+                    to={item.href}
+                    className={clsx(
+                      "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition",
+                      isActive
+                        ? "bg-emerald-100 text-emerald-700 shadow-sm"
+                        : "text-slate-500 hover:bg-emerald-50 hover:text-emerald-600"
+                    )}
+                  >
+                    {item.icon ? <item.icon size={16} /> : null}
+                    {item.label}
+                  </Link>
                 );
               })}
             </nav>
@@ -64,11 +82,14 @@ export default function AppLayout() {
         <p>
           © {new Date().getFullYear()} MatchBuddy · Spiele smarter organisieren
         </p>
-        <p className="mt-1">
+        <div className="mt-2 flex items-center justify-center gap-4">
+          <Link className="hover:text-emerald-600" to="/feedback">
+            Feedback
+          </Link>
           <a className="hover:text-emerald-600" href="/privacy.html">
             Datenschutzerklärung
           </a>
-        </p>
+        </div>
       </footer>
     </div>
   );

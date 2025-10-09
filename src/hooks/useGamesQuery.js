@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   collection,
   getDocs,
@@ -6,11 +6,14 @@ import {
   onSnapshot,
   orderBy,
   query,
+  startAfter,
   where,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { filterGamesByDistance, getRecommendedGames } from "../utils/RecommendationEngine";
 import { normalizeAgeGroup } from "../utils/ageGroups";
+
+const PAGE_SIZE = 20;
 
 const upcomingGames = (games) => {
   if (!Array.isArray(games)) return [];
@@ -24,13 +27,12 @@ const mapSnapshotDocs = (snapshot) =>
 
 const applyFilters = (games, filters = {}) => {
   if (!Array.isArray(games)) return [];
-  const { date = "", ageGroup = "", location = null, radius = 25 } = filters;
+  const { ageGroups = [], location = null, radius = 25 } = filters;
 
   return games.filter((game) => {
-    if (date && game.date && game.date < date) return false;
-    if (ageGroup) {
-      const normalized = normalizeAgeGroup(game.ageGroup);
-      if (normalized !== ageGroup) return false;
+    if (Array.isArray(ageGroups) && ageGroups.length > 0) {
+      const normalized = normalizeAgeGroup(game.ageGroup || game.displayAgeGroup || game.originalAgeGroup);
+      if (!normalized || !ageGroups.includes(normalized)) return false;
     }
     if (location && typeof location.lat === "number" && typeof location.lng === "number") {
       if (typeof game.distanceKm === "number" && Number.isFinite(game.distanceKm)) {
@@ -73,35 +75,80 @@ const sortByUpcomingDate = (games) => {
 };
 
 export function useGamesQuery({ profile, viewerLocation, filters = {} }) {
-  const [games, setGames] = useState([]);
+  const [rawGames, setRawGames] = useState([]);
   const [profileGames, setProfileGames] = useState([]);
   const [legacyGames, setLegacyGames] = useState([]);
+  const [emailGames, setEmailGames] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
+  const lastDocRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
-    async function fetchGames() {
+    async function fetchInitialGames() {
       setIsLoading(true);
       setError(null);
+      lastDocRef.current = null;
       try {
-        const baseQuery = query(collection(db, "games"), orderBy("createdAt", "desc"), limit(60));
-        const snapshot = await getDocs(baseQuery);
+        const collectionRef = collection(db, "games");
+        const initialQuery = query(collectionRef, orderBy("createdAt", "desc"), limit(PAGE_SIZE));
+        const snapshot = await getDocs(initialQuery);
         if (cancelled) return;
-        setGames(upcomingGames(mapSnapshotDocs(snapshot)));
+        const docs = mapSnapshotDocs(snapshot);
+        setRawGames(docs);
+        setHasMore(snapshot.docs.length === PAGE_SIZE);
+        lastDocRef.current = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
       } catch (err) {
         if (cancelled) return;
         console.error("Spiele konnten nicht geladen werden:", err);
         setError(err);
+        setHasMore(false);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
     }
-    fetchGames();
+    fetchInitialGames();
     return () => {
       cancelled = true;
     };
   }, []);
+
+  const loadMore = useCallback(async () => {
+    if (isLoading || isLoadingMore || !hasMore) return;
+    setIsLoadingMore(true);
+    try {
+      const collectionRef = collection(db, "games");
+      const constraints = [orderBy("createdAt", "desc")];
+      if (lastDocRef.current) {
+        constraints.push(startAfter(lastDocRef.current));
+      }
+      constraints.push(limit(PAGE_SIZE));
+      const nextQuery = query(collectionRef, ...constraints);
+      const snapshot = await getDocs(nextQuery);
+      const docs = mapSnapshotDocs(snapshot);
+      setRawGames((prev) => {
+        const merged = [...prev, ...docs];
+        const unique = new Map();
+        merged.forEach((game) => {
+          if (!unique.has(game.id)) {
+            unique.set(game.id, game);
+          }
+        });
+        return Array.from(unique.values());
+      });
+      if (snapshot.docs.length > 0) {
+        lastDocRef.current = snapshot.docs[snapshot.docs.length - 1];
+      }
+      setHasMore(snapshot.docs.length === PAGE_SIZE);
+    } catch (err) {
+      console.error("Weitere Spiele konnten nicht geladen werden:", err);
+      setHasMore(false);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [hasMore, isLoading, isLoadingMore]);
 
   useEffect(() => {
     if (!profile?.id) {
@@ -138,15 +185,28 @@ export function useGamesQuery({ profile, viewerLocation, filters = {} }) {
     };
   }, [profile?.id]);
 
+  useEffect(() => {
+    const normalizedEmail = profile?.emailNormalized || profile?.email?.trim().toLowerCase() || "";
+    if (!normalizedEmail) {
+      setEmailGames([]);
+      return () => undefined;
+    }
+    const q = query(collection(db, "games"), where("trainerEmail", "==", normalizedEmail));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setEmailGames(mapSnapshotDocs(snapshot));
+    });
+    return () => unsubscribe();
+  }, [profile?.email, profile?.emailNormalized]);
+
   const combinedUserGames = useMemo(() => {
     const map = new Map();
-    [...profileGames, ...legacyGames].forEach((game) => {
+    [...profileGames, ...legacyGames, ...emailGames].forEach((game) => {
       if (!map.has(game.id)) {
         map.set(game.id, game);
       }
     });
     return Array.from(map.values());
-  }, [legacyGames, profileGames]);
+  }, [emailGames, legacyGames, profileGames]);
 
   const activeLocation = useMemo(() => {
     if (viewerLocation && typeof viewerLocation.lat === "number") return viewerLocation;
@@ -156,10 +216,50 @@ export function useGamesQuery({ profile, viewerLocation, filters = {} }) {
     return null;
   }, [profile?.location, viewerLocation]);
 
+  const normalizedProfileAgeGroups = useMemo(() => {
+    if (!Array.isArray(profile?.ageGroups)) return [];
+    return Array.from(
+      new Set(
+        profile.ageGroups
+          .map((value) => normalizeAgeGroup(value))
+          .filter((value) => typeof value === "string" && value.trim() !== "")
+      )
+    );
+  }, [profile?.ageGroups]);
+
   const enrichedGames = useMemo(() => {
-    if (games.length === 0) return [];
+    if (rawGames.length === 0) return [];
+    const upcoming = upcomingGames(rawGames);
     const ownIds = new Set(combinedUserGames.map((game) => game.id));
-    const distanceAware = filterGamesByDistance(games, activeLocation, filters.radius || 25);
+    const ownEmails = new Set();
+    combinedUserGames.forEach((game) => {
+      if (typeof game.contactEmail === "string") {
+        ownEmails.add(game.contactEmail.trim().toLowerCase());
+      }
+      if (typeof game.contactEmailNormalized === "string") {
+        ownEmails.add(game.contactEmailNormalized.trim().toLowerCase());
+      }
+      if (typeof game.trainerEmail === "string") {
+        ownEmails.add(game.trainerEmail.trim().toLowerCase());
+      }
+    });
+    const normalizedProfileEmail = profile?.emailNormalized || profile?.email?.trim().toLowerCase() || "";
+    if (normalizedProfileEmail) {
+      ownEmails.add(normalizedProfileEmail);
+    }
+    const isOwnGame = (game) => {
+      if (!game) return false;
+      if (ownIds.has(game.id)) return true;
+      const contactEmail = typeof game.contactEmail === "string" ? game.contactEmail.trim().toLowerCase() : "";
+      if (contactEmail && ownEmails.has(contactEmail)) return true;
+      const contactEmailNormalized =
+        typeof game.contactEmailNormalized === "string" ? game.contactEmailNormalized.trim().toLowerCase() : "";
+      if (contactEmailNormalized && ownEmails.has(contactEmailNormalized)) return true;
+      const trainerEmail = typeof game.trainerEmail === "string" ? game.trainerEmail.trim().toLowerCase() : "";
+      if (trainerEmail && ownEmails.has(trainerEmail)) return true;
+      return false;
+    };
+    const distanceAware = filterGamesByDistance(upcoming, activeLocation, filters.radius || 25);
     const recommended = profile
       ? getRecommendedGames({
           games: distanceAware,
@@ -171,19 +271,24 @@ export function useGamesQuery({ profile, viewerLocation, filters = {} }) {
     const filteredRecommended = applyFilters(recommended, {
       ...filters,
       location: activeLocation,
-    }).filter((game) => !ownIds.has(game.id));
+      ageGroups: normalizedProfileAgeGroups,
+    }).filter((game) => !isOwnGame(game));
     const filteredBase = applyFilters(distanceAware, {
       ...filters,
       location: activeLocation,
-    }).filter((game) => !ownIds.has(game.id));
+      ageGroups: normalizedProfileAgeGroups,
+    }).filter((game) => !isOwnGame(game));
     return sortByUpcomingDate(mergeRecommended(filteredRecommended, filteredBase));
-  }, [activeLocation, combinedUserGames, filters, games, profile]);
+  }, [activeLocation, combinedUserGames, filters, normalizedProfileAgeGroups, profile, rawGames]);
 
   return {
     games: enrichedGames,
     isLoading,
     error,
     location: activeLocation,
+    loadMore,
+    hasMore,
+    isLoadingMore,
   };
 }
 
