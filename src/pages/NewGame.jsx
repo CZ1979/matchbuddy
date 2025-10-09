@@ -268,9 +268,11 @@ export default function NewGame() {
       <section className="rounded-3xl bg-white p-6 shadow-lg shadow-emerald-100/60">
         <div className="space-y-5">
           <div>
-            <h2 className="text-2xl font-semibold text-slate-900">Spiel anlegen</h2>
+            <h2 className="text-2xl font-semibold text-slate-900">Spielgesuch aufgeben</h2>
             <p className="mt-2 text-sm text-slate-600">
-              Gib die Details deines Freundschaftsspiels ein. Wiederkehrende Angaben werden automatisch gespeichert.
+              Gib hier die Details deines Freundschaftsspiels ein. Deine Angaben werden fürs nächste mal gespeichert.
+              Weiter unten findest Du deine bereits eingestellten Spiele.
+              Viel Erfolg bei der Suche!
             </p>
           </div>
 
