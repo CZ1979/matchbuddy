@@ -17,9 +17,10 @@ const PAGE_SIZE = 20;
 
 const upcomingGames = (games) => {
   if (!Array.isArray(games)) return [];
+  const activeGames = games.filter((game) => !game.status || game.status === "active");
   const today = new Date().toISOString().split("T")[0];
-  const futureGames = games.filter((game) => !game.date || game.date >= today);
-  return futureGames.length > 0 ? futureGames : games;
+  const futureGames = activeGames.filter((game) => !game.date || game.date >= today);
+  return futureGames.length > 0 ? futureGames : activeGames;
 };
 
 const mapSnapshotDocs = (snapshot) =>
