@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
 import { MapPin } from "lucide-react";
 import BottomSheet from "./layout/BottomSheet";
-import { generateAgeGroups } from "../utils/ageGroups";
 
 const radiusOptions = [10, 25, 50];
-const defaultFilters = { ageGroup: "", radius: 25, manualCity: "" };
+const defaultFilters = { radius: 25, manualCity: "" };
 
 export default function FilterSheet({ open, filters = {}, onClose, onApply, onReset }) {
   const [draft, setDraft] = useState({ ...defaultFilters, ...filters });
-  const ageGroups = generateAgeGroups();
 
   useEffect(() => {
     if (open) {
@@ -56,22 +54,6 @@ export default function FilterSheet({ open, filters = {}, onClose, onApply, onRe
             onChange={(event) => setDraft((prev) => ({ ...prev, manualCity: event.target.value }))}
           />
           <p className="mt-1 text-xs text-slate-500">Optional: Überschreibt den Standort aus deinem Profil oder GPS.</p>
-        </label>
-
-        <label className="block text-sm font-medium text-slate-600">
-          <span className="mb-1 text-slate-700">Altersklasse</span>
-          <select
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
-            value={draft.ageGroup || ""}
-            onChange={(event) => setDraft((prev) => ({ ...prev, ageGroup: event.target.value }))}
-          >
-            <option value="">Alle Altersklassen</option>
-            {ageGroups.map((group) => (
-              <option key={group.value} value={group.value}>
-                {group.label}
-              </option>
-            ))}
-          </select>
         </label>
 
         <fieldset className="space-y-2">

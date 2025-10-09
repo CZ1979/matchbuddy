@@ -1,8 +1,22 @@
+import { useMemo } from "react";
+import clsx from "clsx";
+import { generateAgeGroups } from "../../utils/ageGroups";
+
 const formatPhoneInput = (value) => value.replace(/[^+\d\s]/g, "");
 
 export default function ProfileForm({ values, onChange, onSubmit, isSaving }) {
+  const ageGroupOptions = useMemo(() => generateAgeGroups(), []);
+  const selectedAgeGroups = Array.isArray(values.ageGroups) ? values.ageGroups : [];
+
   const updateField = (field, value) => {
     onChange?.({ ...values, [field]: value });
+  };
+
+  const toggleAgeGroup = (ageGroup) => {
+    const next = selectedAgeGroups.includes(ageGroup)
+      ? selectedAgeGroups.filter((value) => value !== ageGroup)
+      : [...selectedAgeGroups, ageGroup];
+    updateField("ageGroups", next);
   };
 
   return (
@@ -91,6 +105,38 @@ export default function ProfileForm({ values, onChange, onSubmit, isSaving }) {
         />
         <p className="text-xs text-slate-500">Wir nutzen die Nummer für die WhatsApp-Kontaktaufnahme.</p>
       </div>
+
+      <fieldset className="space-y-3">
+        <legend className="block text-sm font-medium text-slate-700">Bevorzugte Jahrgänge</legend>
+        <p className="text-xs text-slate-500">
+          Wähle alle Jahrgänge aus, für die du Spiele suchst. Diese Auswahl bestimmt deine Empfehlungen.
+        </p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {ageGroupOptions.map((group) => {
+            const checked = selectedAgeGroups.includes(group.value);
+            return (
+              <label
+                key={group.value}
+                className={clsx(
+                  "flex cursor-pointer items-center gap-2 rounded-2xl border px-3 py-2 text-sm transition",
+                  checked
+                    ? "border-emerald-400 bg-emerald-50 text-emerald-700 shadow-sm"
+                    : "border-slate-200 text-slate-600 hover:border-emerald-300 hover:text-emerald-700"
+                )}
+              >
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-slate-300 text-emerald-500 focus:ring-emerald-400"
+                  checked={checked}
+                  onChange={() => toggleAgeGroup(group.value)}
+                />
+                <span>{group.label}</span>
+              </label>
+            );
+          })}
+        </div>
+        <p className="text-xs text-slate-500">Mindestens ein Jahrgang ist erforderlich.</p>
+      </fieldset>
 
       <button
         type="submit"

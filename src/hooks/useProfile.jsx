@@ -11,6 +11,7 @@ import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { normalizePhoneNumber } from "../lib/whatsapp";
 import { geocodePlace } from "../lib/geocode";
+import { normalizeAgeGroup } from "../utils/ageGroups";
 
 const PROFILE_STORAGE_KEY = "trainerProfile";
 const PROFILE_ID_KEY = "trainerProfileId";
@@ -43,6 +44,18 @@ const mapLegacyProfile = (profile, profileId, storedEmail = "") => {
   const resolvedEmail = (profile.email || storedEmail || profileId || "").trim();
   const normalizedEmail = profile.emailNormalized || normalizeEmail(resolvedEmail || profileId);
   const resolvedId = profile.id || profileId || resolvedEmail || "";
+  const legacyAgeGroups = Array.isArray(profile.ageGroups)
+    ? profile.ageGroups
+    : profile.ageGroup
+    ? [profile.ageGroup]
+    : [];
+  const normalizedAgeGroups = Array.from(
+    new Set(
+      legacyAgeGroups
+        .map((value) => normalizeAgeGroup(value))
+        .filter((value) => typeof value === "string" && value.trim() !== "")
+    )
+  );
   return {
     id: resolvedId,
     firstName,
@@ -56,6 +69,7 @@ const mapLegacyProfile = (profile, profileId, storedEmail = "") => {
     location: profile.location || null,
     createdAt: profile.createdAt || null,
     updatedAt: profile.updatedAt || null,
+    ageGroups: normalizedAgeGroups,
   };
 };
 
@@ -121,6 +135,15 @@ export function ProfileProvider({ children }) {
         const snapshot = await getDoc(ref);
         if (!snapshot.exists()) return null;
         const data = snapshot.data();
+        const normalizedAgeGroups = Array.isArray(data.ageGroups)
+          ? Array.from(
+              new Set(
+                data.ageGroups
+                  .map((value) => normalizeAgeGroup(value))
+                  .filter((value) => typeof value === "string" && value.trim() !== "")
+              )
+            )
+          : [];
         const nextProfile = {
           id: targetId,
           firstName: data.firstName || data.fullName?.split(" ")[0] || "",
@@ -134,6 +157,7 @@ export function ProfileProvider({ children }) {
           location: data.location || null,
           createdAt: data.createdAt || null,
           updatedAt: data.updatedAt || null,
+          ageGroups: normalizedAgeGroups,
         };
         persistProfile(nextProfile);
         return nextProfile;
@@ -151,6 +175,19 @@ export function ProfileProvider({ children }) {
     async (input, { geocode = true } = {}) => {
       if (!input || !input.name || !input.club || !input.city || !input.email || !input.phone) {
         throw new Error("Profil unvollständig");
+      }
+
+      const incomingAgeGroups = Array.isArray(input.ageGroups) ? input.ageGroups : [];
+      const normalizedAgeGroups = Array.from(
+        new Set(
+          incomingAgeGroups
+            .map((value) => normalizeAgeGroup(value))
+            .filter((value) => typeof value === "string" && value.trim() !== "")
+        )
+      );
+
+      if (normalizedAgeGroups.length === 0) {
+        throw new Error("Bitte wähle mindestens einen Jahrgang aus.");
       }
 
       setIsSaving(true);
@@ -195,6 +232,7 @@ export function ProfileProvider({ children }) {
                   lng,
                 }
               : null,
+          ageGroups: normalizedAgeGroups,
         };
 
         const payload = {

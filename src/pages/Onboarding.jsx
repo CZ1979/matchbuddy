@@ -10,6 +10,7 @@ const toInitialValues = (profile) => ({
   city: profile?.city || "",
   email: profile?.email || profile?.id || "",
   phone: profile?.phone || "",
+  ageGroups: Array.isArray(profile?.ageGroups) ? profile.ageGroups : [],
 });
 
 export default function Onboarding() {
