@@ -12,6 +12,7 @@ import {
 import { db } from "../firebase";
 import { useUserLocation } from "../hooks/useUserLocation";
 import { useProfile } from "../hooks/useProfile";
+import TeamStrengthLegend from "../components/TeamStrengthLegend";
 import { formatDateGerman } from "../utils/date";
 import { generateAgeGroups, normalizeAgeGroup } from "../utils/ageGroups";
 
@@ -334,6 +335,10 @@ export default function NewGame() {
                 ))}
               </select>
             </label>
+
+            <div className="sm:col-span-2">
+              <TeamStrengthLegend />
+            </div>
 
             <label className="space-y-2 text-sm font-medium text-slate-700">
               <span>Spielort</span>
