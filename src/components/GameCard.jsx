@@ -145,46 +145,52 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
         ))}
       </div>
 
-      <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-        <a
-          href={hasWhatsapp ? whatsappUrl : undefined}
-          target="_blank"
-          rel="noreferrer"
-          aria-disabled={!hasWhatsapp}
-          tabIndex={hasWhatsapp ? undefined : -1}
-          className={clsx(
-            "inline-flex w-full items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition sm:flex-1",
-            hasWhatsapp
-              ? "bg-emerald-500 text-white shadow-sm hover:bg-emerald-600"
-              : "cursor-not-allowed bg-slate-200 text-slate-400"
-          )}
-        >
-          <WhatsAppIcon className="h-4 w-4" />
-          <span>WhatsApp</span>
-        </a>
-        {hasEmail && (
+      <div className="mt-6 space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
           <a
-            href={emailLink}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 sm:flex-1"
-          >
-            <Mail size={16} />
-            <span>E-Mail</span>
-          </a>
-        )}
-        {mapsUrl && (
-          <a
-            href={mapsUrl}
+            href={hasWhatsapp ? whatsappUrl : undefined}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 sm:flex-1"
+            aria-disabled={!hasWhatsapp}
+            aria-label="Per WhatsApp kontaktieren"
+            tabIndex={hasWhatsapp ? undefined : -1}
+            className={clsx(
+              "inline-flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold transition sm:h-auto sm:w-auto sm:flex-1 sm:gap-2 sm:px-3 sm:py-2",
+              hasWhatsapp
+                ? "bg-emerald-500 text-white shadow-sm hover:bg-emerald-600"
+                : "cursor-not-allowed bg-slate-200 text-slate-400"
+            )}
           >
-            <Navigation size={16} /> Route
+            <WhatsAppIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">WhatsApp</span>
           </a>
-        )}
+          {hasEmail && (
+            <a
+              href={emailLink}
+              aria-label="E-Mail senden"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 sm:h-auto sm:w-auto sm:flex-1 sm:gap-2 sm:px-3 sm:py-2"
+            >
+              <Mail size={16} />
+              <span className="hidden sm:inline">E-Mail</span>
+            </a>
+          )}
+          {mapsUrl && (
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Route öffnen"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 sm:h-auto sm:w-auto sm:flex-1 sm:gap-2 sm:px-3 sm:py-2"
+            >
+              <Navigation size={16} />
+              <span className="hidden sm:inline">Route</span>
+            </a>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => onDetails?.(game)}
-          className="inline-flex w-full items-center justify-center rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 sm:flex-1"
+          className="inline-flex w-full items-center justify-center rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600"
         >
           Mehr Details
         </button>

@@ -92,16 +92,6 @@ export default function ProfileForm({ values, onChange, onSubmit, isSaving }) {
         <p className="text-xs text-slate-500">Wir nutzen die Nummer für die WhatsApp-Kontaktaufnahme.</p>
       </div>
 
-      <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
-        <input
-          type="checkbox"
-          checked={values.rememberData}
-          onChange={(event) => updateField("rememberData", event.target.checked)}
-          className="h-4 w-4 rounded border-slate-300 text-emerald-500 focus:ring-emerald-500"
-        />
-        <span>Daten merken</span>
-      </label>
-
       <button
         type="submit"
         disabled={isSaving}

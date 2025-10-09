@@ -24,10 +24,9 @@ const mapSnapshotDocs = (snapshot) =>
 
 const applyFilters = (games, filters = {}) => {
   if (!Array.isArray(games)) return [];
-  const { date = "", ageGroup = "", location = null, radius = 25 } = filters;
+  const { ageGroup = "", location = null, radius = 25 } = filters;
 
   return games.filter((game) => {
-    if (date && game.date && game.date < date) return false;
     if (ageGroup) {
       const normalized = normalizeAgeGroup(game.ageGroup);
       if (normalized !== ageGroup) return false;

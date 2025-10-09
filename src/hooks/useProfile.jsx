@@ -10,6 +10,7 @@ import {
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { normalizePhoneNumber } from "../lib/whatsapp";
+import { geocodePlace } from "../lib/geocode";
 
 const PROFILE_STORAGE_KEY = "trainerProfile";
 const PROFILE_ID_KEY = "trainerProfileId";
@@ -31,32 +32,6 @@ const parseJson = (value) => {
 
 const ensureWindow = () => typeof window !== "undefined" && typeof document !== "undefined";
 
-const geocodeCity = async (city) => {
-  if (!city) return { lat: null, lng: null };
-  const url =
-    "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=de&q=" +
-    encodeURIComponent(city);
-  try {
-    const response = await fetch(url, {
-      headers: {
-        "Accept-Language": "de",
-      },
-    });
-    const data = await response.json();
-    if (Array.isArray(data) && data.length > 0) {
-      const { lat, lon } = data[0];
-      const latNum = Number.parseFloat(lat);
-      const lngNum = Number.parseFloat(lon);
-      if (Number.isFinite(latNum) && Number.isFinite(lngNum)) {
-        return { lat: latNum, lng: lngNum };
-      }
-    }
-  } catch (error) {
-    console.warn("Geocoding fehlgeschlagen:", error);
-  }
-  return { lat: null, lng: null };
-};
-
 const normalizeEmail = (value = "") => value.trim().toLowerCase();
 
 const mapLegacyProfile = (profile, profileId, storedEmail = "") => {
@@ -77,10 +52,7 @@ const mapLegacyProfile = (profile, profileId, storedEmail = "") => {
     phone: profile.phone || "",
     email: resolvedEmail,
     emailNormalized: normalizedEmail,
-    ageGroup: profile.ageGroup || "",
     city: profile.city || profile.locationLabel || "",
-    rememberData:
-      typeof profile.rememberData === "boolean" ? profile.rememberData : profile.remember === true,
     location: profile.location || null,
     createdAt: profile.createdAt || null,
     updatedAt: profile.updatedAt || null,
@@ -158,9 +130,7 @@ export function ProfileProvider({ children }) {
           phone: data.phone || "",
           email: data.email || "",
           emailNormalized: data.emailNormalized || normalizeEmail(data.email || targetId),
-          ageGroup: data.ageGroup || "",
           city: data.city || "",
-          rememberData: data.rememberData !== false,
           location: data.location || null,
           createdAt: data.createdAt || null,
           updatedAt: data.updatedAt || null,
@@ -202,7 +172,7 @@ export function ProfileProvider({ children }) {
         let lng = input.location?.lng ?? profile?.location?.lng ?? null;
 
         if (geocode && input.city && input.city !== lastCityRef.current) {
-          const geo = await geocodeCity(input.city);
+          const geo = await geocodePlace(input.city);
           lat = geo.lat;
           lng = geo.lng;
           lastCityRef.current = input.city;
@@ -217,9 +187,7 @@ export function ProfileProvider({ children }) {
           phone: normalizedPhone,
           email: trimmedEmail,
           emailNormalized: normalizedEmail,
-          ageGroup: profile?.ageGroup || "",
           city: input.city.trim(),
-          rememberData: input.rememberData !== false,
           location:
             lat != null && lng != null
               ? {
@@ -231,7 +199,6 @@ export function ProfileProvider({ children }) {
 
         const payload = {
           ...nextProfile,
-          rememberData: nextProfile.rememberData,
           location: nextProfile.location,
           email: nextProfile.email,
           emailNormalized: nextProfile.emailNormalized,
@@ -247,14 +214,7 @@ export function ProfileProvider({ children }) {
         setIsSaving(false);
       }
     },
-    [
-      persistProfile,
-      profile?.ageGroup,
-      profile?.id,
-      profile?.location?.lat,
-      profile?.location?.lng,
-      profileId,
-    ]
+    [persistProfile, profile?.id, profile?.location?.lat, profile?.location?.lng, profileId]
   );
 
   useEffect(() => {

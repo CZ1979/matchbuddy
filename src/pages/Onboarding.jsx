@@ -10,7 +10,6 @@ const toInitialValues = (profile) => ({
   city: profile?.city || "",
   email: profile?.email || profile?.id || "",
   phone: profile?.phone || "",
-  rememberData: profile?.rememberData !== false,
 });
 
 export default function Onboarding() {
