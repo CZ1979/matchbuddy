@@ -46,10 +46,8 @@ describe("Routing guard", () => {
         id: "test-profile",
         fullName: "Test Trainer",
         club: "FC Test",
-        ageGroup: "U12",
         city: "Berlin",
         phone: "+4912345",
-        rememberData: true,
       })
     );
     localStorage.setItem("trainerProfileId", "test-profile");
