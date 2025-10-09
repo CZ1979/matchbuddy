@@ -1,17 +1,23 @@
-const ensurePlusPrefix = (value = "") => {
-  let phone = value.trim();
-  if (!phone) return "";
-  if (phone.startsWith("0049")) {
-    phone = "+" + phone.slice(2);
-  } else if (phone.startsWith("00") && !phone.startsWith("0049")) {
-    phone = "+" + phone.slice(2);
-  } else if (phone.startsWith("0") && !phone.startsWith("+")) {
-    phone = "+49" + phone.slice(1);
-  } else if (!phone.startsWith("+")) {
-    phone = "+" + phone;
+
+export function ensurePlusPrefix(value) {
+  if (value === null || value === undefined || value === "") return "";
+  // Objekt-Form { countryCode, number }
+  if (typeof value === "object") {
+    const cc = String(value.countryCode || "+49").replace(/[^\d+]/g, "");
+    const num = String(value.number || "").replace(/\D/g, "").replace(/^0+/, "");
+    const combined = `${cc}${num}`;
+    const normalized = combined.replace(/^\++/, "+");
+    return normalized.startsWith("+") ? normalized : `+${normalized.replace(/^\+?/, "")}`;
   }
-  return phone.replace(/\s+/g, "");
-};
+
+  // String-Fall (ältere Daten)
+  const str = String(value).trim();
+  if (str === "") return "";
+  if (str.startsWith("00")) return `+${str.slice(2).replace(/\D/g, "")}`;
+  if (str.startsWith("+")) return `+${str.slice(1).replace(/\D/g, "")}`;
+  return `+${str.replace(/\D/g, "")}`;
+}
+
 
 export const normalizePhoneNumber = (value = "") => ensurePlusPrefix(value);
 

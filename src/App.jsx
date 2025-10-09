@@ -5,6 +5,7 @@ import Feed from "./pages/Feed";
 import Feedback from "./pages/Feedback";
 import NewGame from "./pages/NewGame";
 import { useProfile } from "./hooks/useProfile";
+import ScrollToTop from "./components/ScrollToTop";
 
 function LoadingScreen() {
   return (
@@ -42,17 +43,20 @@ export default function App() {
   const defaultTarget = profileCompleted ? "/feed" : "/onboarding";
 
   return (
-    <Routes>
-      <Route path="/onboarding" element={<Onboarding />} />
-      <Route element={<RequireProfile />}>
-          <Route element={<AppLayout />}>
-            <Route path="/feed" element={<Feed />} />
-            <Route path="/neues-spiel" element={<NewGame />} />
-            <Route path="/feedback" element={<Feedback />} />
-          </Route>
-      </Route>
-      <Route path="/" element={<Navigate to={defaultTarget} replace />} />
-      <Route path="*" element={<Navigate to={defaultTarget} replace />} />
-    </Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
+        <Route path="/onboarding" element={<Onboarding />} />
+        <Route element={<RequireProfile />}>
+            <Route element={<AppLayout />}>
+              <Route path="/feed" element={<Feed />} />
+              <Route path="/neues-spiel" element={<NewGame />} />
+              <Route path="/feedback" element={<Feedback />} />
+            </Route>
+        </Route>
+        <Route path="/" element={<Navigate to={defaultTarget} replace />} />
+        <Route path="*" element={<Navigate to={defaultTarget} replace />} />
+      </Routes>
+    </>
   );
 }

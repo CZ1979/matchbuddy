@@ -1,10 +1,11 @@
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import clsx from "clsx";
 import { generateAgeGroups } from "../../utils/ageGroups";
+import PhoneInput from "../PhoneInput";
 
 const formatPhoneInput = (value) => value.replace(/[^+\d\s]/g, "");
 
-export default function ProfileForm({ values, onChange, onSubmit, isSaving }) {
+export default function ProfileForm({ values = {}, onChange, onSubmit, isSaving }) {
   const ageGroupOptions = useMemo(() => generateAgeGroups(), []);
   const selectedAgeGroups = Array.isArray(values.ageGroups) ? values.ageGroups : [];
 
@@ -19,92 +20,60 @@ export default function ProfileForm({ values, onChange, onSubmit, isSaving }) {
     updateField("ageGroups", next);
   };
 
+  const handleField = (field) => (e) => onChange({ ...values, [field]: e.target.value });
+
   return (
     <form
-      className="space-y-4"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSubmit?.();
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit();
       }}
+      className="space-y-4"
     >
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-slate-700" htmlFor="profile-name">
-          Name
-        </label>
+      <label className="block text-sm font-medium text-slate-700">
+        Name
         <input
-          id="profile-name"
           type="text"
-          required
-          autoComplete="name"
-          placeholder="Max Mustermann"
-          value={values.name}
-          onChange={(event) => updateField("name", event.target.value)}
-          className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+          value={values.name || ""}
+          onChange={handleField("name")}
+          className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
         />
-      </div>
+      </label>
 
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-slate-700" htmlFor="profile-club">
-          Verein
-        </label>
+      <label className="block text-sm font-medium text-slate-700">
+        Verein / Club
         <input
-          id="profile-club"
           type="text"
-          required
-          autoComplete="organization"
-          placeholder="TSV Beispielstadt"
-          value={values.club}
-          onChange={(event) => updateField("club", event.target.value)}
-          className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+          value={values.club || ""}
+          onChange={handleField("club")}
+          className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
         />
-      </div>
+      </label>
 
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-slate-700" htmlFor="profile-city">
-          Ort
-        </label>
+      <label className="block text-sm font-medium text-slate-700">
+        Stadt
         <input
-          id="profile-city"
           type="text"
-          required
-          placeholder="z. B. Berlin"
-          value={values.city}
-          onChange={(event) => updateField("city", event.target.value)}
-          className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+          value={values.city || ""}
+          onChange={handleField("city")}
+          className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
         />
-      </div>
+      </label>
 
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-slate-700" htmlFor="profile-email">
-          E-Mail-Adresse
-        </label>
+      <label className="block text-sm font-medium text-slate-700">
+        E‑Mail
         <input
-          id="profile-email"
           type="email"
-          required
-          autoComplete="email"
-          placeholder="trainer@verein.de"
-          value={values.email}
-          onChange={(event) => updateField("email", event.target.value)}
-          className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+          value={values.email || ""}
+          onChange={handleField("email")}
+          className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
         />
-      </div>
+      </label>
 
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-slate-700" htmlFor="profile-phone">
-          Telefon (für WhatsApp)
-        </label>
-        <input
-          id="profile-phone"
-          type="tel"
-          required
-          placeholder="z. B. +49 170 1234567"
-          value={values.phone}
-          onChange={(event) => updateField("phone", formatPhoneInput(event.target.value))}
-          className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
-        />
-        <p className="text-xs text-slate-500">Wir nutzen die Nummer für die WhatsApp-Kontaktaufnahme.</p>
-      </div>
+      <PhoneInput
+        value={values.phone || { countryCode: "+49", number: "" }}
+        onChange={(phone) => onChange({ ...values, phone })}
+      />
 
       <fieldset className="space-y-3">
         <legend className="block text-sm font-medium text-slate-700">Bevorzugte Jahrgänge</legend>
@@ -138,13 +107,15 @@ export default function ProfileForm({ values, onChange, onSubmit, isSaving }) {
         <p className="text-xs text-slate-500">Mindestens ein Jahrgang ist erforderlich.</p>
       </fieldset>
 
-      <button
-        type="submit"
-        disabled={isSaving}
-        className="w-full rounded-full bg-emerald-500 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200 disabled:cursor-not-allowed disabled:opacity-70"
-      >
-        {isSaving ? "Speichern…" : "Profil speichern & loslegen"}
-      </button>
+      <div className="mt-4 flex justify-end">
+        <button
+          type="submit"
+          disabled={isSaving}
+          className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-600 disabled:opacity-60"
+        >
+          {isSaving ? "Speichern…" : "Profil speichern"}
+        </button>
+      </div>
     </form>
   );
 }

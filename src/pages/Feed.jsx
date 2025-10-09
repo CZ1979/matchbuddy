@@ -12,6 +12,7 @@ import { formatDateGerman } from "../utils/date";
 import { normalizeAgeGroup } from "../utils/ageGroups";
 import { buildGoogleMapsRouteUrl } from "../lib/maps";
 import { geocodePlace } from "../lib/geocode";
+import { buildWhatsappUrl } from "../utils/phone";
 
 const DEFAULT_RADIUS = 25;
 
@@ -44,19 +45,25 @@ const shareGame = async (game) => {
     url: typeof window !== "undefined" ? window.location.href : "https://matchbuddy.app",
   };
 
+  // build whatsapp link (supports new object shape and legacy string)
+  const waTarget = game?.phone || game?.owner?.phone || game?.ownerPhone || game?.ownerPhoneString;
+  const waUrl = buildWhatsappUrl(waTarget);
+
   try {
-    if (typeof navigator !== "undefined" && navigator.share) {
+    if (navigator.share) {
       await navigator.share(sharePayload);
       return;
     }
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      await navigator.clipboard.writeText(`${text} – ${sharePayload.url}`);
-      window.alert("Link in Zwischenablage kopiert");
-      return;
-    }
-  } catch (error) {
-    console.warn("Teilen fehlgeschlagen:", error);
+  } catch (err) {
+    console.error(err);
   }
+
+  if (waUrl) {
+    // open WhatsApp web/app
+    window.open(waUrl, "_blank", "noopener,noreferrer");
+    return;
+  }
+
   window.alert("Teilen wird von diesem Gerät nicht unterstützt.");
 };
 

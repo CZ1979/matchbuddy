@@ -4,14 +4,48 @@ import logo from "../assets/logo.svg";
 import ProfileForm from "../components/forms/ProfileForm";
 import { useProfile } from "../hooks/useProfile";
 
-const toInitialValues = (profile) => ({
-  name: profile?.fullName || [profile?.firstName, profile?.lastName].filter(Boolean).join(" ") || "",
-  club: profile?.club || "",
-  city: profile?.city || "",
-  email: profile?.email || profile?.id || "",
-  phone: profile?.phone || "",
-  ageGroups: Array.isArray(profile?.ageGroups) ? profile.ageGroups : [],
-});
+const toInitialValues = (profile) => {
+  // normalize phone: support old string form or structured object
+  let phoneObj = { countryCode: "+49", number: "" };
+  if (profile?.phone) {
+    if (typeof profile.phone === "string") {
+      const raw = profile.phone.replace(/\s+/g, "");
+      if (raw.startsWith("+")) {
+        const match = raw.match(/^(\+\d{1,3})(\d+)$/);
+        if (match) {
+          phoneObj = { countryCode: match[1], number: match[2].replace(/^0+/, "") };
+        } else {
+          phoneObj.number = raw.replace(/[^\d]/g, "").replace(/^0+/, "");
+        }
+      } else if (raw.startsWith("00")) {
+        const z = raw.replace(/^00/, "");
+        const match = z.match(/^(\d{1,3})(\d+)$/);
+        if (match) {
+          phoneObj = { countryCode: `+${match[1]}`, number: match[2].replace(/^0+/, "") };
+        } else {
+          phoneObj.number = z.replace(/[^\d]/g, "").replace(/^0+/, "");
+        }
+      } else {
+        // national format -> assume +49
+        phoneObj = { countryCode: "+49", number: raw.replace(/[^\d]/g, "").replace(/^0+/, "") };
+      }
+    } else if (typeof profile.phone === "object") {
+      phoneObj = {
+        countryCode: profile.phone.countryCode || "+49",
+        number: profile.phone.number || "",
+      };
+    }
+  }
+
+  return {
+    name: profile?.fullName || [profile?.firstName, profile?.lastName].filter(Boolean).join(" ") || "",
+    club: profile?.club || "",
+    city: profile?.city || "",
+    email: profile?.email || profile?.id || "",
+    phone: phoneObj,
+    ageGroups: Array.isArray(profile?.ageGroups) ? profile.ageGroups : [],
+  };
+};
 
 export default function Onboarding() {
   const { profile, saveProfile, isSaving, profileCompleted } = useProfile();

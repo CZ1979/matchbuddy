@@ -67,6 +67,8 @@ export default function NewGame() {
 
   // LEGEND MODAL REFACTOR
   const [isLegendOpen, setIsLegendOpen] = useState(false);
+  // Details open state (für "Anzeigen" / "Schließen")
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const [ageGroups, setAgeGroups] = useState([]);
   const { location, updateLocation, isLoading } = useUserLocation();
@@ -325,13 +327,13 @@ export default function NewGame() {
 
             <div className="space-y-2 text-sm font-medium text-slate-700">
               <label className="flex flex-col space-y-2">
-                <span>Spielstärke</span>
+                <span>Teamstärke</span>
                 <select
                   className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
                   value={newGame.strength}
                   onChange={(e) => setNewGame((s) => ({ ...s, strength: e.target.value }))}
                 >
-                  <option value="">Spielstärke (1–10)</option>
+                  <option value="">Teamstärke (1–10)</option>
                   {[...Array(10)].map((_, i) => (
                     <option key={i + 1} value={i + 1}>
                       {i + 1}
@@ -339,18 +341,38 @@ export default function NewGame() {
                   ))}
                 </select>
               </label>
-              {/* LEGEND MODAL REFACTOR */}
-              <button
-                type="button"
-                onClick={() => setIsLegendOpen(true)}
-                className="text-sm text-gray-500 transition hover:underline"
-              >
-                ℹ️ Teamstärke-Legende anzeigen
-              </button>
-            </div>
 
-            <div className="sm:col-span-2">
-              <TeamStrengthLegend />
+              {/* collapsible legend */}
+              <details
+                className="group rounded-2xl border border-slate-100 bg-slate-50"
+                onToggle={(e) => setIsDetailsOpen(Boolean(e.target.open))}
+              >
+                <summary
+                  className="flex cursor-pointer items-center justify-between rounded-2xl px-3 py-3 text-sm text-slate-700"
+                  aria-expanded={isDetailsOpen}
+                >
+                  <span className="font-semibold">Teamstärke-Legende</span>
+                  <span className="text-xs text-slate-500">
+                    {isDetailsOpen ? "Schließen" : "Anzeigen"}
+                  </span>
+                </summary>
+                <div className="px-3 pb-3 pt-0">
+                  <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3 text-sm text-slate-600">
+                    <div className="whitespace-normal break-words">
+                      <TeamStrengthLegend />
+                    </div>
+                    <div className="mt-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => setIsLegendOpen(true)}
+                        className="text-sm text-gray-500 transition hover:underline"
+                      >
+                        ℹ️ Weitere Details zur Einordnung!
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </details>
             </div>
 
             <label className="space-y-2 text-sm font-medium text-slate-700">
@@ -479,6 +501,20 @@ export default function NewGame() {
           </ul>
         )}
       </section>
+    </div>
+  );
+}
+
+// Kleine Darstellung der Teamstärke-Legende (präsentationell)
+function TeamStrengthLegend() {
+  return (
+    <div>
+      <ul className="mt-2 space-y-1">
+        <li><strong>1–3:</strong> Anfänger / neu zusammengestellt</li>
+        <li><strong>4–6:</strong> Gemischtes Team / durchschnittlich</li>
+        <li><strong>7–8:</strong> Erfahren</li>
+        <li><strong>9–10:</strong> Wettkampfstark</li>
+      </ul>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { MapPin } from "lucide-react";
 import BottomSheet from "./layout/BottomSheet";
 
@@ -7,12 +7,36 @@ const defaultFilters = { radius: 25, manualCity: "" };
 
 export default function FilterSheet({ open, filters = {}, onClose, onApply, onReset }) {
   const [draft, setDraft] = useState({ ...defaultFilters, ...filters });
+  const inputRef = useRef(null);
 
   useEffect(() => {
     if (open) {
       setDraft({ ...defaultFilters, ...filters });
     }
   }, [filters, open]);
+
+  // Prevent automatic focus on the city input when the sheet opens (avoids keyboard covering content on mobile).
+  useEffect(() => {
+    if (open && inputRef.current) {
+      // Make input temporarily unfocusable by programmatic focus (tabIndex -1).
+      inputRef.current.tabIndex = -1;
+    }
+    // restore tabIndex when closed (optional)
+    if (!open && inputRef.current) {
+      inputRef.current.tabIndex = 0;
+    }
+  }, [open]);
+
+  const handleCityPointerDown = (event) => {
+    const el = inputRef.current;
+    if (!el) return;
+    // If we previously set tabIndex to -1, restore and focus on user interaction
+    if (el.tabIndex === -1) {
+      el.tabIndex = 0;
+      // small timeout to ensure the pointer event finishes before focusing
+      setTimeout(() => el.focus(), 0);
+    }
+  };
 
   const footer = (
     <>
@@ -47,11 +71,13 @@ export default function FilterSheet({ open, filters = {}, onClose, onApply, onRe
             <MapPin size={16} /> Ort für die Suche
           </span>
           <input
+            ref={inputRef}
             type="text"
             placeholder="z. B. Berlin"
             className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
             value={draft.manualCity || ""}
             onChange={(event) => setDraft((prev) => ({ ...prev, manualCity: event.target.value }))}
+            onPointerDown={handleCityPointerDown}
           />
           <p className="mt-1 text-xs text-slate-500">Optional: Überschreibt den Standort aus deinem Profil oder GPS.</p>
         </label>
