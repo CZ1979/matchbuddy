@@ -1,10 +1,10 @@
 import clsx from "clsx";
-import { Trophy, UserRound } from "lucide-react";
+import { Home, Trophy, UserRound } from "lucide-react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import logo from "../../assets/logo.svg";
 
 const navItems = [
-  { href: "/feed", label: "Feed" },
+  { href: "/feed", label: "Feed", icon: Home },
   { href: "/neues-spiel", label: "Meine Spiele", icon: Trophy },
 ];
 
@@ -20,8 +20,25 @@ export default function AppLayout() {
             </Link>
           <div className="flex items-center gap-2">
             <Link
+              to="/feed"
+              className={clsx(
+                "inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 transition sm:hidden",
+                location.pathname === "/feed"
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-600"
+                  : "text-slate-500 hover:border-emerald-300 hover:text-emerald-600"
+              )}
+              aria-label="Feed"
+            >
+              <Home size={18} />
+            </Link>
+            <Link
               to="/neues-spiel"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-emerald-300 hover:text-emerald-600 sm:hidden"
+              className={clsx(
+                "inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 transition sm:hidden",
+                location.pathname === "/neues-spiel"
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-600"
+                  : "text-slate-500 hover:border-emerald-300 hover:text-emerald-600"
+              )}
               aria-label="Meine Spiele"
             >
               <Trophy size={18} />
