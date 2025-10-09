@@ -349,6 +349,10 @@ export default function NewGame() {
               </button>
             </div>
 
+            <div className="sm:col-span-2">
+              <TeamStrengthLegend />
+            </div>
+
             <label className="space-y-2 text-sm font-medium text-slate-700">
               <span>Spielort</span>
               <select
