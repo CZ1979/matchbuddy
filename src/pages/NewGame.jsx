@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   addDoc,
   collection,
@@ -15,23 +15,48 @@ import { useProfile } from "../hooks/useProfile";
 import { formatDateGerman } from "../utils/date";
 import { generateAgeGroups, normalizeAgeGroup } from "../utils/ageGroups";
 
+const loadSavedDefaults = () => {
+  if (typeof window === "undefined") return {};
+  try {
+    const stored = JSON.parse(localStorage.getItem("newGameDefaults") || "{}");
+    return stored && typeof stored === "object" ? stored : {};
+  } catch (error) {
+    console.warn("Standardwerte für neues Spiel konnten nicht geladen werden:", error);
+    return {};
+  }
+};
+
+const deriveProfileDefaultAgeGroup = (ageGroups = []) => {
+  if (!Array.isArray(ageGroups) || ageGroups.length === 0) return "";
+  if (ageGroups.length === 1) return ageGroups[0];
+  const numericValues = ageGroups
+    .map((value) => parseInt(value, 10))
+    .filter((value) => Number.isFinite(value));
+  if (numericValues.length > 0) {
+    return String(Math.max(...numericValues));
+  }
+  return ageGroups[0];
+};
+
 export default function NewGame() {
   const { profile } = useProfile();
-  const saved = JSON.parse(localStorage.getItem("newGameDefaults") || "{}");
-  const savedAgeGroup = normalizeAgeGroup(saved.ageGroup);
 
-  const [newGame, setNewGame] = useState({
-    date: "",
-    time: "",
-    ageGroup: savedAgeGroup || "",
-    strength: saved.strength || "5",
-    locationType: saved.locationType || "home",
-    address: saved.address || "",
-    zip: saved.zip || "",
-    city: saved.city || "",
-    lat: "",
-    lng: "",
-    notes: saved.notes || "",
+  const [newGame, setNewGame] = useState(() => {
+    const saved = loadSavedDefaults();
+    const savedAgeGroup = saved.ageGroup ? normalizeAgeGroup(saved.ageGroup) : "";
+    return {
+      date: "",
+      time: "",
+      ageGroup: savedAgeGroup || "",
+      strength: saved.strength || "5",
+      locationType: saved.locationType || "home",
+      address: saved.address || "",
+      zip: saved.zip || "",
+      city: saved.city || "",
+      lat: "",
+      lng: "",
+      notes: saved.notes || "",
+    };
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -41,6 +66,22 @@ export default function NewGame() {
 
   const [ageGroups, setAgeGroups] = useState([]);
   const { location, updateLocation, isLoading } = useUserLocation();
+
+  const normalizedProfileAgeGroups = useMemo(() => {
+    if (!Array.isArray(profile?.ageGroups)) return [];
+    return Array.from(
+      new Set(
+        profile.ageGroups
+          .map((value) => normalizeAgeGroup(value))
+          .filter((value) => typeof value === "string" && value.trim() !== "")
+      )
+    );
+  }, [profile?.ageGroups]);
+
+  const profileDefaultAgeGroup = useMemo(
+    () => deriveProfileDefaultAgeGroup(normalizedProfileAgeGroups),
+    [normalizedProfileAgeGroups]
+  );
 
   const myGames = useMemo(() => {
     const map = new Map();
@@ -54,6 +95,18 @@ export default function NewGame() {
   useEffect(() => {
     setAgeGroups(generateAgeGroups());
   }, []);
+
+  useEffect(() => {
+    if (!profileDefaultAgeGroup) return;
+    setNewGame((prev) => {
+      const prevNormalized = normalizeAgeGroup(prev.ageGroup);
+      const hasPrev = normalizedProfileAgeGroups.includes(prevNormalized);
+      if (!prevNormalized || !hasPrev) {
+        return { ...prev, ageGroup: profileDefaultAgeGroup };
+      }
+      return prev;
+    });
+  }, [normalizedProfileAgeGroups, profileDefaultAgeGroup]);
 
   // 🔄 Eingaben merken
   useEffect(() => {
@@ -134,6 +187,11 @@ export default function NewGame() {
       let lat = null,
         lng = null;
 
+      const contactEmail = (profile.email || "").trim();
+      const contactEmailNormalized = contactEmail.toLowerCase();
+      const trainerProfileId = profile.id || contactEmailNormalized || "";
+      const trainerEmail = contactEmailNormalized || profile.id || "";
+
       if (newGame.locationType !== "away") {
         const geo = await geocodeAddress(newGame.address, newGame.zip, newGame.city);
         if (geo) {
@@ -151,10 +209,11 @@ export default function NewGame() {
         lng,
         ownerName,
         ownerClub: profile.club || "",
-        contactEmail: profile.email || "",
+        contactEmail,
+        contactEmailNormalized,
         contactPhone: profile.phone || "",
-        trainerEmail: profile.id,
-        trainerProfileId: profile.id,
+        trainerEmail,
+        trainerProfileId,
         createdAt: serverTimestamp(),
       });
 
