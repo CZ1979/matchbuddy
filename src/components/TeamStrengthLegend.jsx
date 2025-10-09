@@ -1,7 +1,8 @@
 import clsx from "clsx";
 import { TEAM_STRENGTH_LEVELS } from "../data/teamStrengthLevels";
 
-export default function TeamStrengthLegend({ className }) {
+// LEGEND MODAL REFACTOR
+function TeamStrengthLegend({ className, showHeading = true }) {
   return (
     <section
       className={clsx(
@@ -10,14 +11,16 @@ export default function TeamStrengthLegend({ className }) {
         className
       )}
     >
-      <div className="space-y-1 text-center sm:text-left">
-        <h2 className="text-2xl font-semibold text-emerald-700">🏆 Teamstärke-Legende</h2>
-        <p className="text-sm text-slate-600">
-          Hilft dir, euer Niveau realistisch einzuschätzen – damit faire Matches entstehen.
-        </p>
-      </div>
+      {showHeading && (
+        <div className="space-y-1 text-center sm:text-left">
+          <h2 className="text-2xl font-semibold text-emerald-700">🏆 Teamstärke-Legende</h2>
+          <p className="text-sm text-slate-600">
+            Hilft dir, euer Niveau realistisch einzuschätzen – damit faire Matches entstehen.
+          </p>
+        </div>
+      )}
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      <div className={clsx(showHeading ? "mt-6" : "mt-4", "grid gap-4 sm:grid-cols-2")}>
         {TEAM_STRENGTH_LEVELS.map((level) => (
           <article
             key={level.value}
@@ -56,3 +59,5 @@ export default function TeamStrengthLegend({ className }) {
     </section>
   );
 }
+
+export default TeamStrengthLegend;

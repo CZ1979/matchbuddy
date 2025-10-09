@@ -12,7 +12,7 @@ import {
 import { db } from "../firebase";
 import { useUserLocation } from "../hooks/useUserLocation";
 import { useProfile } from "../hooks/useProfile";
-import TeamStrengthLegend from "../components/TeamStrengthLegend";
+import TeamStrengthModal from "../components/TeamStrengthModal";
 import { formatDateGerman } from "../utils/date";
 import { generateAgeGroups, normalizeAgeGroup } from "../utils/ageGroups";
 
@@ -64,6 +64,9 @@ export default function NewGame() {
   const [successMsg, setSuccessMsg] = useState("");
   const [profileGames, setProfileGames] = useState([]);
   const [legacyGames, setLegacyGames] = useState([]);
+
+  // LEGEND MODAL REFACTOR
+  const [isLegendOpen, setIsLegendOpen] = useState(false);
 
   const [ageGroups, setAgeGroups] = useState([]);
   const { location, updateLocation, isLoading } = useUserLocation();
@@ -320,21 +323,31 @@ export default function NewGame() {
               </select>
             </label>
 
-            <label className="space-y-2 text-sm font-medium text-slate-700">
-              <span>Spielstärke</span>
-              <select
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
-                value={newGame.strength}
-                onChange={(e) => setNewGame((s) => ({ ...s, strength: e.target.value }))}
+            <div className="space-y-2 text-sm font-medium text-slate-700">
+              <label className="flex flex-col space-y-2">
+                <span>Spielstärke</span>
+                <select
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                  value={newGame.strength}
+                  onChange={(e) => setNewGame((s) => ({ ...s, strength: e.target.value }))}
+                >
+                  <option value="">Spielstärke (1–10)</option>
+                  {[...Array(10)].map((_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      {i + 1}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {/* LEGEND MODAL REFACTOR */}
+              <button
+                type="button"
+                onClick={() => setIsLegendOpen(true)}
+                className="text-sm text-gray-500 transition hover:underline"
               >
-                <option value="">Spielstärke (1–10)</option>
-                {[...Array(10)].map((_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    {i + 1}
-                  </option>
-                ))}
-              </select>
-            </label>
+                ℹ️ Teamstärke-Legende anzeigen
+              </button>
+            </div>
 
             <div className="sm:col-span-2">
               <TeamStrengthLegend />
@@ -416,6 +429,10 @@ export default function NewGame() {
           </div>
         </div>
       </section>
+
+      {isLegendOpen && (
+        <TeamStrengthModal onClose={() => setIsLegendOpen(false)} />
+      )}
 
       <section className="rounded-3xl bg-white p-6 shadow-lg shadow-emerald-100/60">
         <div className="flex flex-wrap items-center justify-between gap-2">
