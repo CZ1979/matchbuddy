@@ -1,11 +1,11 @@
 import clsx from "clsx";
-import { PlusCircle, UserRound } from "lucide-react";
+import { Trophy, UserRound } from "lucide-react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import logo from "../../assets/logo.svg";
 
 const navItems = [
   { href: "/feed", label: "Feed" },
-  { href: "/neues-spiel", label: "Spiel anlegen" },
+  { href: "/neues-spiel", label: "Meine Spiele", icon: Trophy },
 ];
 
 export default function AppLayout() {
@@ -22,9 +22,9 @@ export default function AppLayout() {
             <Link
               to="/neues-spiel"
               className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-emerald-300 hover:text-emerald-600 sm:hidden"
-              aria-label="Spiel anlegen"
+              aria-label="Meine Spiele"
             >
-              <PlusCircle size={18} />
+              <Trophy size={18} />
             </Link>
             <nav className="hidden items-center gap-2 sm:flex">
               {navItems.map((item) => {
@@ -32,16 +32,17 @@ export default function AppLayout() {
                 return (
                   <Link
                     key={item.href}
-                  to={item.href}
-                  className={clsx(
-                    "rounded-full px-4 py-2 text-sm font-medium transition",
-                    isActive
-                      ? "bg-emerald-100 text-emerald-700 shadow-sm"
-                      : "text-slate-500 hover:bg-emerald-50 hover:text-emerald-600"
-                  )}
-                >
-                  {item.label}
-                </Link>
+                    to={item.href}
+                    className={clsx(
+                      "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition",
+                      isActive
+                        ? "bg-emerald-100 text-emerald-700 shadow-sm"
+                        : "text-slate-500 hover:bg-emerald-50 hover:text-emerald-600"
+                    )}
+                  >
+                    {item.icon ? <item.icon size={16} /> : null}
+                    {item.label}
+                  </Link>
                 );
               })}
             </nav>
