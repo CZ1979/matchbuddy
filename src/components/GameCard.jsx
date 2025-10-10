@@ -38,13 +38,39 @@ const formatAgeGroupLabel = (value) => {
   return str;
 };
 
-const resolveBadge = (game) => {
-  if (!game) return "Gegner gesucht";
-  if (typeof game.matchType === "string") {
-    if (game.matchType.toLowerCase().includes("freund")) return "Freundschaftsspiel";
+const toStrengthChip = (strength) => {
+  const numericStrength = Number(strength);
+  if (!Number.isFinite(numericStrength)) return null;
+
+  if (numericStrength <= 3) {
+    return {
+      label: `Stärke ${numericStrength}`,
+      className: "border-sky-200 bg-sky-50 text-sky-700",
+      iconClassName: "text-sky-500",
+    };
   }
-  if (game.notes && /freundschaft/i.test(game.notes)) return "Freundschaftsspiel";
-  return "Gegner gesucht";
+
+  if (numericStrength <= 6) {
+    return {
+      label: `Stärke ${numericStrength}`,
+      className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      iconClassName: "text-emerald-500",
+    };
+  }
+
+  if (numericStrength <= 8) {
+    return {
+      label: `Stärke ${numericStrength}`,
+      className: "border-amber-200 bg-amber-50 text-amber-700",
+      iconClassName: "text-amber-500",
+    };
+  }
+
+  return {
+    label: `Stärke ${numericStrength}`,
+    className: "border-rose-200 bg-rose-50 text-rose-700",
+    iconClassName: "text-rose-500",
+  };
 };
 
 const buildContactMessage = (game, profile) => {
@@ -76,11 +102,11 @@ export default function GameCard({
   isFavorite = false,
   onShare,
 }) {
-  const badgeLabel = resolveBadge(game);
   const dateLabel = game.date ? formatDateGerman(game.date) : "Datum folgt";
   const distanceLabel = toDistanceLabel(game.distanceKm);
   const ageGroupLabel = formatAgeGroupLabel(game.displayAgeGroup || game.originalAgeGroup || game.ageGroup);
-  const strengthLabel = game.strength ? `Stärke ${game.strength}` : "";
+  const trainerName = game.ownerName?.trim() || "Trainer unbekannt";
+  const strengthChip = toStrengthChip(game.strength);
   const whatsappUrl = buildWhatsAppUrl({
     phone: game.contactPhone,
     message: buildContactMessage(game, viewerProfile),
@@ -98,25 +124,28 @@ export default function GameCard({
   const infoChips = [
     {
       label: dateLabel,
-      icon: <CalendarDays size={14} />,
-      highlight: true,
+      icon: CalendarDays,
+      className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      iconClassName: "text-emerald-500",
     },
     game.time
       ? {
           label: game.time,
-          icon: <Clock size={14} />,
+          icon: Clock,
         }
       : null,
     ageGroupLabel
       ? {
           label: ageGroupLabel,
-          icon: <UsersRound size={14} />,
+          icon: UsersRound,
         }
       : null,
-    strengthLabel
+    strengthChip
       ? {
-          label: strengthLabel,
-          icon: <BarChart3 size={14} />,
+          label: strengthChip.label,
+          icon: BarChart3,
+          className: strengthChip.className,
+          iconClassName: strengthChip.iconClassName,
         }
       : null,
   ].filter(Boolean);
@@ -124,16 +153,16 @@ export default function GameCard({
   return (
     <article
       className={clsx(
-        "relative overflow-hidden rounded-3xl p-5 shadow-lg shadow-emerald-100/70 ring-1 ring-emerald-100 transition-colors duration-200",
-        isSaved ? "bg-emerald-50/80 ring-2 ring-emerald-400 shadow-emerald-200/80" : "bg-white hover:bg-emerald-50/60",
+        "relative overflow-hidden rounded-3xl border border-white/70 bg-white p-5 shadow-xl shadow-emerald-100/60 transition-colors duration-200",
+        isSaved ? "bg-emerald-50/80 ring-2 ring-emerald-400" : "hover:bg-emerald-50/60",
         isInactive && "opacity-60"
       )}
     >
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600" />
       <div className="flex items-start justify-between gap-4">
         <div>
-          <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-600">
-            {badgeLabel}
+          <span className="inline-flex items-center rounded-full bg-emerald-50/80 px-3 py-1 text-xs font-semibold text-emerald-700">
+            {trainerName}
           </span>
           <h3 className="mt-3 text-xl font-semibold text-slate-900">
             {game.ownerClub || "Unbekannter Verein"}
@@ -176,11 +205,13 @@ export default function GameCard({
           <span
             key={`${chip.label}-${index}`}
             className={clsx(
-              "inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1",
-              chip.highlight && "bg-emerald-50 text-emerald-700"
+              "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600",
+              chip.className
             )}
           >
-            {chip.icon}
+            {chip.icon ? (
+              <chip.icon size={14} className={clsx("shrink-0 text-slate-400", chip.iconClassName)} />
+            ) : null}
             <span>{chip.label}</span>
           </span>
         ))}
