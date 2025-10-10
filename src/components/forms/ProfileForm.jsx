@@ -61,7 +61,7 @@ export default function ProfileForm({ values = {}, onChange, onSubmit, isSaving 
       </label>
 
       <label className="block text-sm font-medium text-slate-700">
-        E‑Mail
+        E‑Mail <span className="text-xs font-normal text-slate-400">(optional)</span>
         <input
           type="email"
           value={values.email || ""}

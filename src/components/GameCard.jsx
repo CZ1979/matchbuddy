@@ -1,6 +1,15 @@
 import clsx from "clsx";
-import { BarChart3, CalendarDays, Clock, Mail, MapPin, Navigation, UsersRound } from "lucide-react";
-import OverflowMenu from "./OverflowMenu";
+import {
+  BarChart3,
+  Bookmark,
+  CalendarDays,
+  Clock,
+  Info,
+  MapPin,
+  Navigation,
+  Share2,
+  UsersRound,
+} from "lucide-react";
 import { buildGoogleMapsRouteUrl } from "../lib/maps";
 import { formatDateGerman } from "../utils/date";
 import { buildWhatsAppUrl } from "../lib/whatsapp";
@@ -58,7 +67,15 @@ const buildContactMessage = (game, profile) => {
   return lines.join("\n");
 };
 
-export default function GameCard({ game, viewerProfile, onDetails, onAction, isSaved = false }) {
+export default function GameCard({
+  game,
+  viewerProfile,
+  onDetails,
+  isSaved = false,
+  onToggleFavorite,
+  isFavorite = false,
+  onShare,
+}) {
   const badgeLabel = resolveBadge(game);
   const dateLabel = game.date ? formatDateGerman(game.date) : "Datum folgt";
   const distanceLabel = toDistanceLabel(game.distanceKm);
@@ -69,9 +86,14 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
     message: buildContactMessage(game, viewerProfile),
   });
   const hasWhatsapp = Boolean(whatsappUrl);
-  const emailLink = typeof game.contactEmail === "string" && game.contactEmail.trim() ? `mailto:${game.contactEmail}` : "";
-  const hasEmail = Boolean(emailLink);
   const mapsUrl = buildGoogleMapsRouteUrl({ address: game.address, zip: game.zip, city: game.city });
+  const isInactive = game.status && game.status !== "active";
+  const statusLabel =
+    game.status === "cancelled"
+      ? "Spiel abgesagt"
+      : game.status === "matched"
+      ? "Matchpartner gefunden"
+      : "";
 
   const infoChips = [
     {
@@ -103,7 +125,8 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
     <article
       className={clsx(
         "relative overflow-hidden rounded-3xl p-5 shadow-lg shadow-emerald-100/70 ring-1 ring-emerald-100 transition-colors duration-200",
-        isSaved ? "bg-emerald-50/80 ring-2 ring-emerald-400 shadow-emerald-200/80" : "bg-white hover:bg-emerald-50/60"
+        isSaved ? "bg-emerald-50/80 ring-2 ring-emerald-400 shadow-emerald-200/80" : "bg-white hover:bg-emerald-50/60",
+        isInactive && "opacity-60"
       )}
     >
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600" />
@@ -123,12 +146,30 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
             )}
           </p>
         </div>
-        <OverflowMenu
-          onAction={(action) => {
-            onAction?.(action, game);
-          }}
-        />
+        {/* FEATURE 6: Share Button + Favorites */}
+        <button
+          type="button"
+          onClick={() => onToggleFavorite?.(game)}
+          className={clsx(
+            "inline-flex h-9 w-9 items-center justify-center rounded-full border transition",
+            isFavorite
+              ? "border-emerald-300 bg-emerald-50 text-emerald-600"
+              : "border-slate-200 text-slate-500 hover:border-emerald-400 hover:text-emerald-600"
+          )}
+          title={isFavorite ? "Gemerkt" : "Merken"}
+          aria-pressed={isFavorite}
+        >
+          <Bookmark size={18} className={clsx(isFavorite && "fill-current text-emerald-500")} />
+          <span className="sr-only">Favorisieren</span>
+        </button>
       </div>
+
+      {/* FEATURE 4: Game Status + Undo */}
+      {isInactive && statusLabel && (
+        <div className="mt-4 inline-flex items-center rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
+          {statusLabel}
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600">
         {infoChips.map((chip, index) => (
@@ -145,8 +186,9 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
         ))}
       </div>
 
-      <div className="mt-6 space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
+      {/* FEATURE 6: Share Button + Favorites */}
+      <div className="mt-6 space-y-3">
+        <div className="grid grid-cols-4 gap-2">
           <a
             href={hasWhatsapp ? whatsappUrl : undefined}
             target="_blank"
@@ -155,7 +197,8 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
             aria-label="Per WhatsApp kontaktieren"
             tabIndex={hasWhatsapp ? undefined : -1}
             className={clsx(
-              "inline-flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold transition sm:h-auto sm:w-auto sm:flex-1 sm:gap-2 sm:px-3 sm:py-2",
+              "inline-flex h-12 items-center justify-center gap-1 rounded-2xl text-sm font-semibold transition",
+              "flex-col sm:flex-row",
               hasWhatsapp
                 ? "bg-emerald-500 text-white shadow-sm hover:bg-emerald-600"
                 : "cursor-not-allowed bg-slate-200 text-slate-400"
@@ -164,36 +207,42 @@ export default function GameCard({ game, viewerProfile, onDetails, onAction, isS
             <WhatsAppIcon className="h-4 w-4" />
             <span className="hidden sm:inline">WhatsApp</span>
           </a>
-          {hasEmail && (
-            <a
-              href={emailLink}
-              aria-label="E-Mail senden"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 sm:h-auto sm:w-auto sm:flex-1 sm:gap-2 sm:px-3 sm:py-2"
-            >
-              <Mail size={16} />
-              <span className="hidden sm:inline">E-Mail</span>
-            </a>
-          )}
-          {mapsUrl && (
-            <a
-              href={mapsUrl}
-              target="_blank"
-              rel="noreferrer"
-              aria-label="Route öffnen"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 sm:h-auto sm:w-auto sm:flex-1 sm:gap-2 sm:px-3 sm:py-2"
-            >
-              <Navigation size={16} />
-              <span className="hidden sm:inline">Route</span>
-            </a>
-          )}
+          <a
+            href={mapsUrl || undefined}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Route öffnen"
+            tabIndex={mapsUrl ? undefined : -1}
+            className={clsx(
+              "inline-flex h-12 items-center justify-center gap-1 rounded-2xl border text-sm font-medium transition",
+              "flex-col sm:flex-row",
+              mapsUrl
+                ? "border-slate-200 text-slate-600 hover:border-emerald-300 hover:text-emerald-600"
+                : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+            )}
+          >
+            <Navigation size={16} />
+            <span className="hidden sm:inline">Route</span>
+          </a>
+          <button
+            type="button"
+            onClick={() => onDetails?.(game)}
+            aria-label="Details anzeigen"
+            className="inline-flex h-12 items-center justify-center gap-1 rounded-2xl border border-slate-200 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 flex-col sm:flex-row"
+          >
+            <Info size={16} />
+            <span className="hidden sm:inline">Details</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onShare?.(game)}
+            aria-label="Spiel teilen"
+            className="inline-flex h-12 items-center justify-center gap-1 rounded-2xl border border-slate-200 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 flex-col sm:flex-row"
+          >
+            <Share2 size={16} />
+            <span className="hidden sm:inline">Teilen</span>
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => onDetails?.(game)}
-          className="inline-flex w-full items-center justify-center rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600"
-        >
-          Mehr Details
-        </button>
       </div>
     </article>
   );

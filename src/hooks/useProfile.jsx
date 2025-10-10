@@ -173,7 +173,7 @@ export function ProfileProvider({ children }) {
 
   const saveProfile = useCallback(
     async (input, { geocode = true } = {}) => {
-      if (!input || !input.name || !input.club || !input.city || !input.email || !input.phone) {
+      if (!input || !input.name || !input.club || !input.city || !input.phone) {
         throw new Error("Profil unvollständig");
       }
 
@@ -196,8 +196,8 @@ export function ProfileProvider({ children }) {
         const [firstName, ...rest] = trimmedName.split(/\s+/);
         const lastName = rest.join(" ");
         const normalizedPhone = normalizePhoneNumber(input.phone || "");
-        const trimmedEmail = input.email.trim();
-        const normalizedEmail = normalizeEmail(trimmedEmail);
+        const trimmedEmail = (input.email || "").trim();
+        const normalizedEmail = trimmedEmail ? normalizeEmail(trimmedEmail) : "";
         const generatedId =
           typeof globalThis.crypto !== "undefined" &&
           typeof globalThis.crypto.randomUUID === "function"
@@ -238,8 +238,8 @@ export function ProfileProvider({ children }) {
         const payload = {
           ...nextProfile,
           location: nextProfile.location,
-          email: nextProfile.email,
-          emailNormalized: nextProfile.emailNormalized,
+          email: nextProfile.email || null,
+          emailNormalized: nextProfile.emailNormalized || null,
           updatedAt: serverTimestamp(),
         };
 

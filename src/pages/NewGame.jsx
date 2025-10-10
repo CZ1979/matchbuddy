@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import clsx from "clsx";
 import {
   addDoc,
   collection,
@@ -6,8 +7,10 @@ import {
   query,
   where,
   onSnapshot,
-  deleteDoc,
   doc,
+  updateDoc,
+  orderBy,
+  deleteDoc,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { useUserLocation } from "../hooks/useUserLocation";
@@ -64,6 +67,10 @@ export default function NewGame() {
   const [successMsg, setSuccessMsg] = useState("");
   const [profileGames, setProfileGames] = useState([]);
   const [legacyGames, setLegacyGames] = useState([]);
+  const [gameHistory, setGameHistory] = useState([]);
+  const [gamesTab, setGamesTab] = useState("active");
+  const [statusToast, setStatusToast] = useState(null);
+  const undoStateRef = useRef(null);
 
   // LEGEND MODAL REFACTOR
   const [isLegendOpen, setIsLegendOpen] = useState(false);
@@ -96,6 +103,16 @@ export default function NewGame() {
     });
     return Array.from(map.values()).sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0));
   }, [legacyGames, profileGames]);
+
+  const activeGames = useMemo(
+    () => myGames.filter((game) => (game.status || "active") === "active"),
+    [myGames]
+  );
+
+  const pastGames = useMemo(
+    () => myGames.filter((game) => (game.status || "active") !== "active"),
+    [myGames]
+  );
 
   // 🧠 Altersklassen Dropdown
   useEffect(() => {
@@ -221,6 +238,8 @@ export default function NewGame() {
         trainerEmail,
         trainerProfileId,
         createdAt: serverTimestamp(),
+        // FEATURE 4: Game Status + Undo
+        status: "active",
       });
 
       setNewGame((s) => ({ ...s, date: "" }));
@@ -263,10 +282,88 @@ export default function NewGame() {
     return () => unsubscribe();
   }, [profile?.id]);
 
-  // 🗑️ Spiel löschen
-  const handleDelete = async (id) => {
-    if (!window.confirm("Möchtest du dieses Spiel wirklich löschen?")) return;
-    await deleteDoc(doc(db, "games", id));
+  useEffect(() => {
+    if (!profile?.id) {
+      setGameHistory([]);
+      return () => undefined;
+    }
+    const historyQuery = query(
+      collection(db, "game_history"),
+      where("trainerId", "==", profile.id),
+      orderBy("timestamp", "desc")
+    );
+    const unsubscribe = onSnapshot(historyQuery, (snapshot) => {
+      const entries = [];
+      snapshot.forEach((docSnap) => {
+        entries.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      setGameHistory(entries);
+    });
+    return () => unsubscribe();
+  }, [profile?.id]);
+
+  useEffect(() => {
+    if (!statusToast) return () => undefined;
+    const timeout = window.setTimeout(() => {
+      setStatusToast(null);
+      undoStateRef.current = null;
+    }, 6000);
+    return () => window.clearTimeout(timeout);
+  }, [statusToast]);
+
+  // FEATURE 4: Game Status + Undo
+  const showStatusToast = (gameId, nextStatus, historyId) => {
+    setStatusToast({
+      message: "Status gespeichert – Rückgängig?",
+      actionLabel: "Rückgängig",
+      gameId,
+      nextStatus,
+      historyId,
+    });
+  };
+
+  const handleUpdateStatus = async (game, nextStatus) => {
+    if (!game?.id || !profile?.id) return;
+    if (game.status === nextStatus) return;
+    try {
+      const gameRef = doc(db, "games", game.id);
+      const previousStatus = game.status || "active";
+      await updateDoc(gameRef, { status: nextStatus });
+      const historyRef = await addDoc(collection(db, "game_history"), {
+        gameId: game.id,
+        status: nextStatus,
+        timestamp: serverTimestamp(),
+        trainerId: profile.id,
+        teamName: game.ownerClub || game.ownerName || "Unbekanntes Team",
+      });
+      undoStateRef.current = {
+        gameId: game.id,
+        previousStatus,
+        historyId: historyRef.id,
+      };
+      showStatusToast(game.id, nextStatus, historyRef.id);
+    } catch (error) {
+      console.error("Spielstatus konnte nicht aktualisiert werden:", error);
+      window.alert("Spielstatus konnte nicht gespeichert werden.");
+    }
+  };
+
+  const handleUndoStatus = async () => {
+    const undoState = undoStateRef.current;
+    if (!undoState?.gameId) return;
+    try {
+      const gameRef = doc(db, "games", undoState.gameId);
+      await updateDoc(gameRef, { status: undoState.previousStatus || "active" });
+      if (undoState.historyId) {
+        await deleteDoc(doc(db, "game_history", undoState.historyId));
+      }
+    } catch (error) {
+      console.error("Status konnte nicht zurückgesetzt werden:", error);
+      window.alert("Status konnte nicht zurückgesetzt werden.");
+    } finally {
+      undoStateRef.current = null;
+      setStatusToast(null);
+    }
   };
 
   return (
@@ -462,21 +559,130 @@ export default function NewGame() {
           <span className="text-xs font-medium text-slate-500">{myGames.length} Einträge</span>
         </div>
 
-        {myGames.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-500">Du hast noch keine Spiele angelegt.</p>
-        ) : (
+        {/* FEATURE 4: Game Status + Undo */}
+        <div className="mt-4 flex gap-2">
+          <button
+            type="button"
+            onClick={() => setGamesTab("active")}
+            className={clsx(
+              "inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition",
+              gamesTab === "active"
+                ? "border-emerald-300 bg-emerald-100 text-emerald-700"
+                : "border-slate-200 text-slate-500 hover:border-emerald-300 hover:text-emerald-600"
+            )}
+          >
+            Aktive Spiele
+          </button>
+          <button
+            type="button"
+            onClick={() => setGamesTab("history")}
+            className={clsx(
+              "inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition",
+              gamesTab === "history"
+                ? "border-emerald-300 bg-emerald-100 text-emerald-700"
+                : "border-slate-200 text-slate-500 hover:border-emerald-300 hover:text-emerald-600",
+              pastGames.length === 0 && gameHistory.length === 0 && "opacity-60"
+            )}
+            disabled={pastGames.length === 0 && gameHistory.length === 0}
+          >
+            Vergangene Spiele
+          </button>
+        </div>
+
+        {gamesTab === "active" ? (
+          activeGames.length === 0 ? (
+            <p className="mt-4 text-sm text-slate-500">Du hast noch keine Spiele angelegt.</p>
+          ) : (
+            <ul className="mt-4 space-y-4">
+              {activeGames.map((g) => {
+                const normalizedGroup = normalizeAgeGroup(g.ageGroup);
+                const status = g.status || "active";
+                const isInactive = status !== "active";
+                const statusLabel =
+                  status === "cancelled"
+                    ? "Abgesagt"
+                    : status === "matched"
+                    ? "Matchpartner gefunden"
+                    : "";
+                return (
+                  <li
+                    key={g.id}
+                    className={clsx(
+                      "rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm text-slate-600 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-4",
+                      isInactive && "opacity-60"
+                    )}
+                  >
+                    <div className="space-y-1">
+                      <p className="font-semibold text-slate-800">
+                        {formatDateGerman(g.date)} {g.time && `• ${g.time}`} {normalizedGroup && `• ${normalizedGroup}`}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {g.ownerClub && `${g.ownerClub} — `}
+                        {g.ownerName}
+                      </p>
+                      {g.address && (
+                        <p className="text-xs text-slate-400">
+                          {g.address}, {g.zip} {g.city}
+                        </p>
+                      )}
+                      {statusLabel && (
+                        <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                          {statusLabel}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-3 flex flex-col gap-2 sm:mt-0 sm:flex-row">
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateStatus(g, "cancelled")}
+                        className={clsx(
+                          "inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs font-semibold transition",
+                          status === "cancelled"
+                            ? "border-red-300 bg-red-100 text-red-700"
+                            : "border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50"
+                        )}
+                        disabled={status === "cancelled"}
+                      >
+                        Spiel abgesagt
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateStatus(g, "matched")}
+                        className={clsx(
+                          "inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs font-semibold transition",
+                          status === "matched"
+                            ? "border-emerald-300 bg-emerald-100 text-emerald-700"
+                            : "border-emerald-200 text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50"
+                        )}
+                        disabled={status === "matched"}
+                      >
+                        Matchpartner gefunden
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        ) : pastGames.length > 0 ? (
           <ul className="mt-4 space-y-4">
-            {myGames.map((g) => {
+            {pastGames.map((g) => {
               const normalizedGroup = normalizeAgeGroup(g.ageGroup);
+              const status = g.status || "active";
+              const statusLabel =
+                status === "cancelled"
+                  ? "Abgesagt"
+                  : status === "matched"
+                  ? "Matchpartner gefunden"
+                  : "";
               return (
                 <li
                   key={g.id}
-                  className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm text-slate-600 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-4"
+                  className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm text-slate-600 shadow-sm"
                 >
                   <div className="space-y-1">
                     <p className="font-semibold text-slate-800">
-                      {formatDateGerman(g.date)} {g.time && `• ${g.time}`}{" "}
-                      {normalizedGroup && `• ${normalizedGroup}`}
+                      {formatDateGerman(g.date)} {g.time && `• ${g.time}`} {normalizedGroup && `• ${normalizedGroup}`}
                     </p>
                     <p className="text-xs text-slate-500">
                       {g.ownerClub && `${g.ownerClub} — `}
@@ -487,20 +693,55 @@ export default function NewGame() {
                         {g.address}, {g.zip} {g.city}
                       </p>
                     )}
+                    {statusLabel && (
+                      <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                        {statusLabel}
+                      </span>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(g.id)}
-                    className="mt-3 inline-flex items-center justify-center rounded-full border border-red-200 px-4 py-2 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50 sm:mt-0"
-                  >
-                    Spiel löschen
-                  </button>
                 </li>
               );
             })}
           </ul>
+        ) : gameHistory.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-500">Noch keine Historie vorhanden.</p>
+        ) : (
+          <ul className="mt-4 space-y-4">
+            {gameHistory.map((entry) => (
+              <li
+                key={entry.id}
+                className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm text-slate-600 shadow-sm"
+              >
+                <p className="font-semibold text-slate-800">{entry.teamName || "Team"}</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {entry.status === "cancelled" ? "Abgesagt" : "Matchpartner gefunden"}
+                  {entry.timestamp?.toDate ? (
+                    <>
+                      {" • "}
+                      {formatDateGerman(entry.timestamp.toDate().toISOString().split("T")[0])}
+                    </>
+                  ) : null}
+                </p>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
+
+      {statusToast && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-xs">
+          <div className="flex items-center justify-between gap-3 rounded-2xl bg-slate-900/90 px-4 py-3 text-sm text-white shadow-xl">
+            <span>{statusToast.message}</span>
+            <button
+              type="button"
+              onClick={handleUndoStatus}
+              className="rounded-full border border-white/40 px-3 py-1 text-xs font-semibold text-white transition hover:border-white hover:bg-white/10"
+            >
+              Rückgängig
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
