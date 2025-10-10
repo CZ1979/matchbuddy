@@ -1,3 +1,4 @@
+import { useEffect, useId, useRef, useState } from "react";
 import clsx from "clsx";
 import {
   BarChart3,
@@ -14,6 +15,7 @@ import { buildGoogleMapsRouteUrl } from "../lib/maps";
 import { formatDateGerman } from "../utils/date";
 import { buildWhatsAppUrl } from "../lib/whatsapp";
 import { TEAM_STRENGTH_LEVELS } from "../data/teamStrengthLevels";
+import { getStrengthPalette } from "../utils/strengthPalette";
 
 const WhatsAppIcon = (props) => (
   <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
@@ -40,51 +42,16 @@ const formatAgeGroupLabel = (value) => {
 };
 
 const toStrengthChip = (strength) => {
-  const numericStrength = Number(strength);
-  if (!Number.isFinite(numericStrength)) return null;
+  const palette = getStrengthPalette(strength);
+  if (!palette) return null;
 
-  const clamped = Math.min(Math.max(Math.round(numericStrength), 1), 10);
-  const descriptor = TEAM_STRENGTH_LEVELS.find((level) => level.value === clamped)?.label;
-  const palette = [
-    {
-      from: 1,
-      to: 2,
-      className: "border border-sky-300/60 bg-sky-200/80 text-sky-700",
-      iconClassName: "text-sky-700",
-    },
-    {
-      from: 3,
-      to: 4,
-      className: "border border-cyan-300/60 bg-cyan-200/80 text-cyan-700",
-      iconClassName: "text-cyan-700",
-    },
-    {
-      from: 5,
-      to: 6,
-      className: "border border-teal-300/60 bg-teal-200/80 text-teal-700",
-      iconClassName: "text-teal-700",
-    },
-    {
-      from: 7,
-      to: 8,
-      className: "border border-amber-300/60 bg-amber-200/80 text-amber-700",
-      iconClassName: "text-amber-700",
-    },
-    {
-      from: 9,
-      to: 10,
-      className: "border border-rose-300/60 bg-rose-200/80 text-rose-700",
-      iconClassName: "text-rose-700",
-    },
-  ];
-
-  const match = palette.find((range) => clamped >= range.from && clamped <= range.to) ?? palette[palette.length - 1];
+  const descriptor = TEAM_STRENGTH_LEVELS.find((level) => level.value === palette.value)?.label;
 
   return {
-    label: `Stärke ${clamped}`,
-    title: descriptor || `Stärke ${clamped}`,
-    className: match.className,
-    iconClassName: match.iconClassName,
+    label: `Stärke ${palette.value}`,
+    title: descriptor || `Stärke ${palette.value}`,
+    className: palette.className,
+    iconClassName: palette.iconClassName,
   };
 };
 
@@ -170,12 +137,12 @@ export default function GameCard({
   return (
     <article
       className={clsx(
-        "relative overflow-hidden rounded-3xl border border-white/70 bg-white p-5 shadow-xl shadow-emerald-100/60 transition-colors duration-200",
+        "relative rounded-3xl border border-white/70 bg-white p-5 shadow-xl shadow-emerald-100/60 transition-colors duration-200",
         isSaved ? "bg-emerald-50/80 ring-2 ring-emerald-400" : "hover:bg-emerald-50/60",
         isInactive && "opacity-60"
       )}
     >
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600" />
+      <div className="absolute inset-x-0 top-0 h-1 rounded-t-3xl bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600" />
       <div className="flex items-start justify-between gap-4">
         <div>
           <span className="inline-flex items-center rounded-full bg-emerald-50/80 px-3 py-1 text-xs font-semibold text-emerald-700">
@@ -220,23 +187,7 @@ export default function GameCard({
       <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600">
         {infoChips.map((chip, index) => {
           if (chip.isStrength) {
-            const accessibleLabel = chip.title ? `${chip.label} – ${chip.title}` : chip.label;
-            return (
-              <span
-                key={`strength-${index}`}
-                className={clsx(
-                  "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold",
-                  chip.className
-                )}
-                title={chip.title}
-                aria-label={accessibleLabel}
-              >
-                {chip.icon ? (
-                  <chip.icon size={16} className={clsx("shrink-0", chip.iconClassName)} />
-                ) : null}
-                <span className="leading-tight">{chip.label}</span>
-              </span>
-            );
+            return <StrengthBadge key={`strength-${index}`} chip={chip} />;
           }
 
           return (
@@ -315,5 +266,81 @@ export default function GameCard({
         </div>
       </div>
     </article>
+  );
+}
+
+function StrengthBadge({ chip }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const tooltipId = useId();
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event) => {
+      if (!containerRef.current) return;
+      if (!containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    const handleFocusIn = (event) => {
+      if (!containerRef.current) return;
+      if (!containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("focusin", handleFocusIn);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("focusin", handleFocusIn);
+    };
+  }, [isOpen]);
+
+  const accessibleLabel = chip.title ? `${chip.label} – ${chip.title}` : chip.label;
+
+  return (
+    <span className="relative inline-flex" ref={containerRef}>
+      <button
+        type="button"
+        className={clsx(
+          "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition",
+          chip.className,
+          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+        )}
+        aria-expanded={isOpen}
+        aria-label={accessibleLabel}
+        aria-describedby={isOpen ? tooltipId : undefined}
+        onClick={() => setIsOpen((prev) => !prev)}
+      >
+        {chip.icon ? <chip.icon size={16} className={clsx("shrink-0", chip.iconClassName)} /> : null}
+        <span className="leading-tight">{chip.label}</span>
+      </button>
+      <span
+        role="tooltip"
+        id={tooltipId}
+        className={clsx(
+          "pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-44 -translate-x-1/2 rounded-2xl bg-slate-900/95 p-3 text-left text-xs font-medium text-white shadow-lg transition",
+          isOpen ? "opacity-100" : "opacity-0"
+        )}
+      >
+        <span className="block text-[0.7rem] font-semibold uppercase tracking-wide text-white/70">Teamstärke</span>
+        <span className="mt-1 block text-sm font-semibold text-white">{chip.label}</span>
+        {chip.title && (
+          <span className="mt-1 block text-[0.75rem] font-medium text-white/80">{chip.title}</span>
+        )}
+      </span>
+    </span>
   );
 }
