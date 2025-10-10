@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import clsx from "clsx";
 import { ExternalLink, Filter, MapPin, RefreshCcw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import GameCard from "../components/GameCard";
@@ -81,7 +80,7 @@ export default function Feed() {
     [filters.location, geoLocation, profile?.location]
   );
 
-  const { games, isLoading: isLoadingGames, error, loadMore, hasMore, isLoadingMore } = useGamesQuery({
+  const { games, isLoading: isLoadingGames, error } = useGamesQuery({
     profile,
     viewerLocation,
     filters,
@@ -259,26 +258,6 @@ export default function Feed() {
               />
             ))}
           </div>
-          {hasMore && (
-            <div className="mt-6 flex justify-center">
-              <button
-                type="button"
-                onClick={loadMore}
-                disabled={isLoadingMore}
-                className={clsx(
-                  "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition",
-                  isLoadingMore
-                    ? "border-slate-200 bg-slate-100 text-slate-400"
-                    : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"
-                )}
-              >
-                {isLoadingMore ? "Lädt weitere Spiele…" : "Mehr Spiele laden"}
-              </button>
-            </div>
-          )}
-          {!hasMore && !isLoadingMore && games.length > 0 && (
-            <p className="text-center text-xs text-slate-400">Keine weiteren Spiele verfügbar.</p>
-          )}
         </>
       )}
 

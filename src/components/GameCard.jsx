@@ -45,31 +45,35 @@ const toStrengthChip = (strength) => {
   if (numericStrength <= 3) {
     return {
       label: `Stärke ${numericStrength}`,
-      className: "border-sky-200 bg-sky-50 text-sky-700",
-      iconClassName: "text-sky-500",
+      detail: "Einsteiger",
+      className: "border-sky-400/70 bg-sky-100 text-sky-900 shadow-[inset_0_1px_0_rgba(8,145,178,0.25)]",
+      iconClassName: "text-sky-600",
     };
   }
 
   if (numericStrength <= 6) {
     return {
       label: `Stärke ${numericStrength}`,
-      className: "border-emerald-200 bg-emerald-50 text-emerald-700",
-      iconClassName: "text-emerald-500",
+      detail: "Ausgewogen",
+      className: "border-emerald-400/70 bg-emerald-100 text-emerald-900 shadow-[inset_0_1px_0_rgba(16,185,129,0.25)]",
+      iconClassName: "text-emerald-600",
     };
   }
 
   if (numericStrength <= 8) {
     return {
       label: `Stärke ${numericStrength}`,
-      className: "border-amber-200 bg-amber-50 text-amber-700",
-      iconClassName: "text-amber-500",
+      detail: "Leistungsstark",
+      className: "border-amber-400/70 bg-amber-100 text-amber-900 shadow-[inset_0_1px_0_rgba(217,119,6,0.25)]",
+      iconClassName: "text-amber-600",
     };
   }
 
   return {
     label: `Stärke ${numericStrength}`,
-    className: "border-rose-200 bg-rose-50 text-rose-700",
-    iconClassName: "text-rose-500",
+    detail: "Top Team",
+    className: "border-rose-400/70 bg-rose-100 text-rose-900 shadow-[inset_0_1px_0_rgba(244,63,94,0.25)]",
+    iconClassName: "text-rose-600",
   };
 };
 
@@ -146,6 +150,7 @@ export default function GameCard({
           icon: BarChart3,
           className: strengthChip.className,
           iconClassName: strengthChip.iconClassName,
+          detail: strengthChip.detail,
         }
       : null,
   ].filter(Boolean);
@@ -206,13 +211,24 @@ export default function GameCard({
             key={`${chip.label}-${index}`}
             className={clsx(
               "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600",
-              chip.className
+              chip.className,
+              chip.detail && "gap-2 px-3.5 py-1.5"
             )}
           >
             {chip.icon ? (
               <chip.icon size={14} className={clsx("shrink-0 text-slate-400", chip.iconClassName)} />
             ) : null}
-            <span>{chip.label}</span>
+            <span
+              className={clsx(
+                "leading-tight",
+                chip.detail && "flex flex-col text-left"
+              )}
+            >
+              <span>{chip.label}</span>
+              {chip.detail ? (
+                <span className="text-[10px] font-semibold uppercase tracking-wide opacity-80">{chip.detail}</span>
+              ) : null}
+            </span>
           </span>
         ))}
       </div>
