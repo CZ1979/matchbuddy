@@ -1,19 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  collection,
-  getDocs,
-  limit,
-  onSnapshot,
-  orderBy,
-  query,
-  startAfter,
-  where,
-} from "firebase/firestore";
+import { useEffect, useMemo, useState } from "react";
+import { collection, getDocs, onSnapshot, orderBy, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 import { filterGamesByDistance, getRecommendedGames } from "../utils/RecommendationEngine";
 import { normalizeAgeGroup } from "../utils/ageGroups";
-
-const PAGE_SIZE = 20;
 
 const upcomingGames = (games) => {
   if (!Array.isArray(games)) return [];
@@ -81,31 +70,24 @@ export function useGamesQuery({ profile, viewerLocation, filters = {} }) {
   const [legacyGames, setLegacyGames] = useState([]);
   const [emailGames, setEmailGames] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState(null);
-  const [hasMore, setHasMore] = useState(true);
-  const lastDocRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
     async function fetchInitialGames() {
       setIsLoading(true);
       setError(null);
-      lastDocRef.current = null;
       try {
         const collectionRef = collection(db, "games");
-        const initialQuery = query(collectionRef, orderBy("createdAt", "desc"), limit(PAGE_SIZE));
+        const initialQuery = query(collectionRef, orderBy("createdAt", "desc"));
         const snapshot = await getDocs(initialQuery);
         if (cancelled) return;
         const docs = mapSnapshotDocs(snapshot);
         setRawGames(docs);
-        setHasMore(snapshot.docs.length === PAGE_SIZE);
-        lastDocRef.current = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
       } catch (err) {
         if (cancelled) return;
         console.error("Spiele konnten nicht geladen werden:", err);
         setError(err);
-        setHasMore(false);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -115,41 +97,6 @@ export function useGamesQuery({ profile, viewerLocation, filters = {} }) {
       cancelled = true;
     };
   }, []);
-
-  const loadMore = useCallback(async () => {
-    if (isLoading || isLoadingMore || !hasMore) return;
-    setIsLoadingMore(true);
-    try {
-      const collectionRef = collection(db, "games");
-      const constraints = [orderBy("createdAt", "desc")];
-      if (lastDocRef.current) {
-        constraints.push(startAfter(lastDocRef.current));
-      }
-      constraints.push(limit(PAGE_SIZE));
-      const nextQuery = query(collectionRef, ...constraints);
-      const snapshot = await getDocs(nextQuery);
-      const docs = mapSnapshotDocs(snapshot);
-      setRawGames((prev) => {
-        const merged = [...prev, ...docs];
-        const unique = new Map();
-        merged.forEach((game) => {
-          if (!unique.has(game.id)) {
-            unique.set(game.id, game);
-          }
-        });
-        return Array.from(unique.values());
-      });
-      if (snapshot.docs.length > 0) {
-        lastDocRef.current = snapshot.docs[snapshot.docs.length - 1];
-      }
-      setHasMore(snapshot.docs.length === PAGE_SIZE);
-    } catch (err) {
-      console.error("Weitere Spiele konnten nicht geladen werden:", err);
-      setHasMore(false);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }, [hasMore, isLoading, isLoadingMore]);
 
   useEffect(() => {
     if (!profile?.id) {
@@ -287,9 +234,6 @@ export function useGamesQuery({ profile, viewerLocation, filters = {} }) {
     isLoading,
     error,
     location: activeLocation,
-    loadMore,
-    hasMore,
-    isLoadingMore,
   };
 }
 
