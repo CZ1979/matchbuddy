@@ -12,29 +12,20 @@ import { formatDateGerman } from "../utils/date";
 import { normalizeAgeGroup } from "../utils/ageGroups";
 import { buildGoogleMapsRouteUrl } from "../lib/maps";
 import { geocodePlace } from "../lib/geocode";
-import { buildWhatsappUrl } from "../utils/phone";
+import { buildWhatsAppUrl as buildWhatsappUrl } from "../lib/whatsapp";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  query,
+  serverTimestamp,
+  where,
+} from "firebase/firestore";
+import { db } from "../firebase";
 
 const DEFAULT_RADIUS = 25;
-
-const loadSavedGameIds = () => {
-  if (typeof window === "undefined") return [];
-  try {
-    const stored = JSON.parse(localStorage.getItem("savedGames") || "[]");
-    return Array.isArray(stored) ? stored : [];
-  } catch (error) {
-    console.warn("Merkliste konnte nicht geladen werden:", error);
-    return [];
-  }
-};
-
-const persistSavedGameIds = (ids) => {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem("savedGames", JSON.stringify(ids));
-  } catch (error) {
-    console.warn("Merkliste konnte nicht gespeichert werden:", error);
-  }
-};
 
 const shareGame = async (game) => {
   const date = game.date ? formatDateGerman(game.date) : "bald";
@@ -80,7 +71,7 @@ export default function Feed() {
   });
   const [isFilterOpen, setFilterOpen] = useState(false);
   const [selectedGame, setSelectedGame] = useState(null);
-  const [savedIds, setSavedIds] = useState(loadSavedGameIds);
+  const [favoritesMap, setFavoritesMap] = useState({});
   const [filterError, setFilterError] = useState("");
   const [isGeocodingLocation, setIsGeocodingLocation] = useState(false);
   const loadMoreRef = useRef(null);
@@ -123,24 +114,48 @@ export default function Feed() {
     ? buildGoogleMapsRouteUrl({ address: selectedGame.address, zip: selectedGame.zip, city: selectedGame.city })
     : "";
 
-  const handleCardAction = async (action, game) => {
-    if (!game) return;
-    switch (action) {
-      case "save": {
-        setSavedIds((prev) => {
-          const next = prev.includes(game.id)
-            ? prev.filter((id) => id !== game.id)
-            : [...prev, game.id];
-          persistSavedGameIds(next);
-          return next;
+  // FEATURE 6: Share Button + Favorites
+  useEffect(() => {
+    if (!profile?.id) {
+      setFavoritesMap({});
+      return () => undefined;
+    }
+    const favoritesQuery = query(
+      collection(db, "favorites"),
+      where("trainerId", "==", profile.id)
+    );
+    const unsubscribe = onSnapshot(favoritesQuery, (snapshot) => {
+      const map = {};
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data?.gameId) {
+          map[data.gameId] = { id: docSnap.id, ...data };
+        }
+      });
+      setFavoritesMap(map);
+    });
+    return () => unsubscribe();
+  }, [profile?.id]);
+
+  const handleToggleFavorite = async (game) => {
+    if (!profile?.id) {
+      window.alert("Bitte melde dich an, um Favoriten zu speichern.");
+      return;
+    }
+    const existing = favoritesMap[game.id];
+    try {
+      if (existing) {
+        await deleteDoc(doc(db, "favorites", existing.id));
+      } else {
+        await addDoc(collection(db, "favorites"), {
+          trainerId: profile.id,
+          gameId: game.id,
+          createdAt: serverTimestamp(),
         });
-        break;
       }
-      case "share":
-        await shareGame(game);
-        break;
-      default:
-        break;
+    } catch (error) {
+      console.error("Favorit konnte nicht aktualisiert werden:", error);
+      window.alert("Favorit konnte nicht gespeichert werden.");
     }
   };
 
@@ -257,8 +272,10 @@ export default function Feed() {
                 game={game}
                 viewerProfile={profile}
                 onDetails={setSelectedGame}
-                onAction={handleCardAction}
-                isSaved={savedIds.includes(game.id)}
+                isSaved={Boolean(favoritesMap[game.id])}
+                onToggleFavorite={handleToggleFavorite}
+                isFavorite={Boolean(favoritesMap[game.id])}
+                onShare={shareGame}
               />
             ))}
           </div>

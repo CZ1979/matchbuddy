@@ -1,9 +1,17 @@
 import { useState, useEffect } from "react";
+import { toPhoneObject } from "../utils/phone";
 
 export default function PhoneInput({ value = { countryCode: "+49", number: "" }, onChange }) {
-  const [countryCode, setCountryCode] = useState(value.countryCode || "+49");
-  const [number, setNumber] = useState(value.number || "");
+  const initial = toPhoneObject(value);
+  const [countryCode, setCountryCode] = useState(initial.countryCode || "+49");
+  const [number, setNumber] = useState(initial.number || "");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const next = toPhoneObject(value);
+    setCountryCode((prev) => (prev !== next.countryCode ? next.countryCode : prev));
+    setNumber((prev) => (prev !== next.number ? next.number : prev));
+  }, [value]);
 
   useEffect(() => {
     const ccRaw = String(countryCode || "+49").trim().replace(/^00/, "+").replace(/[^\d+]/g, "");
