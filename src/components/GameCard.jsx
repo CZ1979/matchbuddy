@@ -13,6 +13,7 @@ import {
 import { buildGoogleMapsRouteUrl } from "../lib/maps";
 import { formatDateGerman } from "../utils/date";
 import { buildWhatsAppUrl } from "../lib/whatsapp";
+import { TEAM_STRENGTH_LEVELS } from "../data/teamStrengthLevels";
 
 const WhatsAppIcon = (props) => (
   <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
@@ -42,38 +43,48 @@ const toStrengthChip = (strength) => {
   const numericStrength = Number(strength);
   if (!Number.isFinite(numericStrength)) return null;
 
-  if (numericStrength <= 3) {
-    return {
-      label: `Stärke ${numericStrength}`,
-      detail: "Einsteiger",
-      className: "border-sky-400/70 bg-sky-100 text-sky-900 shadow-[inset_0_1px_0_rgba(8,145,178,0.25)]",
-      iconClassName: "text-sky-600",
-    };
-  }
+  const clamped = Math.min(Math.max(Math.round(numericStrength), 1), 10);
+  const descriptor = TEAM_STRENGTH_LEVELS.find((level) => level.value === clamped)?.label;
+  const palette = [
+    {
+      from: 1,
+      to: 2,
+      className: "border border-sky-300/60 bg-sky-200/80 text-sky-700",
+      iconClassName: "text-sky-700",
+    },
+    {
+      from: 3,
+      to: 4,
+      className: "border border-cyan-300/60 bg-cyan-200/80 text-cyan-700",
+      iconClassName: "text-cyan-700",
+    },
+    {
+      from: 5,
+      to: 6,
+      className: "border border-teal-300/60 bg-teal-200/80 text-teal-700",
+      iconClassName: "text-teal-700",
+    },
+    {
+      from: 7,
+      to: 8,
+      className: "border border-amber-300/60 bg-amber-200/80 text-amber-700",
+      iconClassName: "text-amber-700",
+    },
+    {
+      from: 9,
+      to: 10,
+      className: "border border-rose-300/60 bg-rose-200/80 text-rose-700",
+      iconClassName: "text-rose-700",
+    },
+  ];
 
-  if (numericStrength <= 6) {
-    return {
-      label: `Stärke ${numericStrength}`,
-      detail: "Ausgewogen",
-      className: "border-emerald-400/70 bg-emerald-100 text-emerald-900 shadow-[inset_0_1px_0_rgba(16,185,129,0.25)]",
-      iconClassName: "text-emerald-600",
-    };
-  }
-
-  if (numericStrength <= 8) {
-    return {
-      label: `Stärke ${numericStrength}`,
-      detail: "Leistungsstark",
-      className: "border-amber-400/70 bg-amber-100 text-amber-900 shadow-[inset_0_1px_0_rgba(217,119,6,0.25)]",
-      iconClassName: "text-amber-600",
-    };
-  }
+  const match = palette.find((range) => clamped >= range.from && clamped <= range.to) ?? palette[palette.length - 1];
 
   return {
-    label: `Stärke ${numericStrength}`,
-    detail: "Top Team",
-    className: "border-rose-400/70 bg-rose-100 text-rose-900 shadow-[inset_0_1px_0_rgba(244,63,94,0.25)]",
-    iconClassName: "text-rose-600",
+    label: `Stärke ${clamped}`,
+    title: descriptor || `Stärke ${clamped}`,
+    className: match.className,
+    iconClassName: match.iconClassName,
   };
 };
 
@@ -146,11 +157,12 @@ export default function GameCard({
       : null,
     strengthChip
       ? {
-          label: strengthChip.label,
           icon: BarChart3,
+          label: strengthChip.label,
           className: strengthChip.className,
           iconClassName: strengthChip.iconClassName,
-          detail: strengthChip.detail,
+          title: strengthChip.title,
+          isStrength: true,
         }
       : null,
   ].filter(Boolean);
@@ -206,31 +218,42 @@ export default function GameCard({
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600">
-        {infoChips.map((chip, index) => (
-          <span
-            key={`${chip.label}-${index}`}
-            className={clsx(
-              "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600",
-              chip.className,
-              chip.detail && "gap-2 px-3.5 py-1.5"
-            )}
-          >
-            {chip.icon ? (
-              <chip.icon size={14} className={clsx("shrink-0 text-slate-400", chip.iconClassName)} />
-            ) : null}
+        {infoChips.map((chip, index) => {
+          if (chip.isStrength) {
+            const accessibleLabel = chip.title ? `${chip.label} – ${chip.title}` : chip.label;
+            return (
+              <span
+                key={`strength-${index}`}
+                className={clsx(
+                  "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold",
+                  chip.className
+                )}
+                title={chip.title}
+                aria-label={accessibleLabel}
+              >
+                {chip.icon ? (
+                  <chip.icon size={16} className={clsx("shrink-0", chip.iconClassName)} />
+                ) : null}
+                <span className="leading-tight">{chip.label}</span>
+              </span>
+            );
+          }
+
+          return (
             <span
+              key={`${chip.label}-${index}`}
               className={clsx(
-                "leading-tight",
-                chip.detail && "flex flex-col text-left"
+                "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600",
+                chip.className
               )}
             >
-              <span>{chip.label}</span>
-              {chip.detail ? (
-                <span className="text-[10px] font-semibold uppercase tracking-wide opacity-80">{chip.detail}</span>
+              {chip.icon ? (
+                <chip.icon size={14} className={clsx("shrink-0 text-slate-400", chip.iconClassName)} />
               ) : null}
+              <span className="leading-tight">{chip.label}</span>
             </span>
-          </span>
-        ))}
+          );
+        })}
       </div>
 
       {/* FEATURE 6: Share Button + Favorites */}
