@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ExternalLink, Filter, MapPin, RefreshCcw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import GameCard from "../components/GameCard";
@@ -74,38 +74,17 @@ export default function Feed() {
   const [favoritesMap, setFavoritesMap] = useState({});
   const [filterError, setFilterError] = useState("");
   const [isGeocodingLocation, setIsGeocodingLocation] = useState(false);
-  const loadMoreRef = useRef(null);
-  const supportsIntersectionObserver =
-    typeof window !== "undefined" && "IntersectionObserver" in window;
 
   const viewerLocation = useMemo(
     () => filters.location || geoLocation || profile?.location || null,
     [filters.location, geoLocation, profile?.location]
   );
 
-  const { games, isLoading: isLoadingGames, error, loadMore, hasMore, isLoadingMore } = useGamesQuery({
+  const { games, isLoading: isLoadingGames, error } = useGamesQuery({
     profile,
     viewerLocation,
     filters,
   });
-
-  useEffect(() => {
-    if (!hasMore || !supportsIntersectionObserver) return undefined;
-    const target = loadMoreRef.current;
-    if (!target) return undefined;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            loadMore();
-          }
-        });
-      },
-      { rootMargin: "200px" }
-    );
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [hasMore, loadMore, games.length, supportsIntersectionObserver]);
 
   const locationLabel = filters.locationLabel || profile?.city || (viewerLocation ? "deinem Standort" : "Deutschland");
   const totalGames = games.length;
@@ -279,27 +258,6 @@ export default function Feed() {
               />
             ))}
           </div>
-          {hasMore && (
-            <div ref={loadMoreRef} className="flex items-center justify-center py-6" aria-hidden="true">
-              {isLoadingMore && (
-                <span className="text-sm text-slate-500">Mehr Spiele werden geladen…</span>
-              )}
-            </div>
-          )}
-          {!hasMore && !isLoadingMore && games.length > 0 && (
-            <p className="text-center text-xs text-slate-400">Keine weiteren Spiele verfügbar.</p>
-          )}
-          {hasMore && !supportsIntersectionObserver && (
-            <div className="mt-4 flex justify-center">
-              <button
-                type="button"
-                onClick={loadMore}
-                className="rounded-full border border-emerald-200 px-4 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-50"
-                >
-                  Mehr Spiele laden
-                </button>
-              </div>
-            )}
         </>
       )}
 

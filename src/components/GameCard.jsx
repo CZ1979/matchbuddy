@@ -38,13 +38,51 @@ const formatAgeGroupLabel = (value) => {
   return str;
 };
 
-const resolveBadge = (game) => {
-  if (!game) return "Gegner gesucht";
-  if (typeof game.matchType === "string") {
-    if (game.matchType.toLowerCase().includes("freund")) return "Freundschaftsspiel";
-  }
-  if (game.notes && /freundschaft/i.test(game.notes)) return "Freundschaftsspiel";
-  return "Gegner gesucht";
+const toStrengthChip = (strength) => {
+  const numericStrength = Number(strength);
+  if (!Number.isFinite(numericStrength)) return null;
+
+  const clamped = Math.min(Math.max(Math.round(numericStrength), 1), 10);
+  const palette = [
+    {
+      from: 1,
+      to: 2,
+      className: "border border-sky-300/60 bg-sky-200/80 text-sky-700",
+      iconClassName: "text-sky-700",
+    },
+    {
+      from: 3,
+      to: 4,
+      className: "border border-cyan-300/60 bg-cyan-200/80 text-cyan-700",
+      iconClassName: "text-cyan-700",
+    },
+    {
+      from: 5,
+      to: 6,
+      className: "border border-teal-300/60 bg-teal-200/80 text-teal-700",
+      iconClassName: "text-teal-700",
+    },
+    {
+      from: 7,
+      to: 8,
+      className: "border border-amber-300/60 bg-amber-200/80 text-amber-700",
+      iconClassName: "text-amber-700",
+    },
+    {
+      from: 9,
+      to: 10,
+      className: "border border-rose-300/60 bg-rose-200/80 text-rose-700",
+      iconClassName: "text-rose-700",
+    },
+  ];
+
+  const match = palette.find((range) => clamped >= range.from && clamped <= range.to) ?? palette[palette.length - 1];
+
+  return {
+    title: `Stärke ${clamped}`,
+    className: match.className,
+    iconClassName: match.iconClassName,
+  };
 };
 
 const buildContactMessage = (game, profile) => {
@@ -76,11 +114,11 @@ export default function GameCard({
   isFavorite = false,
   onShare,
 }) {
-  const badgeLabel = resolveBadge(game);
   const dateLabel = game.date ? formatDateGerman(game.date) : "Datum folgt";
   const distanceLabel = toDistanceLabel(game.distanceKm);
   const ageGroupLabel = formatAgeGroupLabel(game.displayAgeGroup || game.originalAgeGroup || game.ageGroup);
-  const strengthLabel = game.strength ? `Stärke ${game.strength}` : "";
+  const trainerName = game.ownerName?.trim() || "Trainer unbekannt";
+  const strengthChip = toStrengthChip(game.strength);
   const whatsappUrl = buildWhatsAppUrl({
     phone: game.contactPhone,
     message: buildContactMessage(game, viewerProfile),
@@ -98,25 +136,29 @@ export default function GameCard({
   const infoChips = [
     {
       label: dateLabel,
-      icon: <CalendarDays size={14} />,
-      highlight: true,
+      icon: CalendarDays,
+      className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      iconClassName: "text-emerald-500",
     },
     game.time
       ? {
           label: game.time,
-          icon: <Clock size={14} />,
+          icon: Clock,
         }
       : null,
     ageGroupLabel
       ? {
           label: ageGroupLabel,
-          icon: <UsersRound size={14} />,
+          icon: UsersRound,
         }
       : null,
-    strengthLabel
+    strengthChip
       ? {
-          label: strengthLabel,
-          icon: <BarChart3 size={14} />,
+          icon: BarChart3,
+          className: strengthChip.className,
+          iconClassName: strengthChip.iconClassName,
+          title: strengthChip.title,
+          isStrength: true,
         }
       : null,
   ].filter(Boolean);
@@ -124,16 +166,16 @@ export default function GameCard({
   return (
     <article
       className={clsx(
-        "relative overflow-hidden rounded-3xl p-5 shadow-lg shadow-emerald-100/70 ring-1 ring-emerald-100 transition-colors duration-200",
-        isSaved ? "bg-emerald-50/80 ring-2 ring-emerald-400 shadow-emerald-200/80" : "bg-white hover:bg-emerald-50/60",
+        "relative overflow-hidden rounded-3xl border border-white/70 bg-white p-5 shadow-xl shadow-emerald-100/60 transition-colors duration-200",
+        isSaved ? "bg-emerald-50/80 ring-2 ring-emerald-400" : "hover:bg-emerald-50/60",
         isInactive && "opacity-60"
       )}
     >
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600" />
       <div className="flex items-start justify-between gap-4">
         <div>
-          <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-600">
-            {badgeLabel}
+          <span className="inline-flex items-center rounded-full bg-emerald-50/80 px-3 py-1 text-xs font-semibold text-emerald-700">
+            {trainerName}
           </span>
           <h3 className="mt-3 text-xl font-semibold text-slate-900">
             {game.ownerClub || "Unbekannter Verein"}
@@ -172,18 +214,41 @@ export default function GameCard({
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600">
-        {infoChips.map((chip, index) => (
-          <span
-            key={`${chip.label}-${index}`}
-            className={clsx(
-              "inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1",
-              chip.highlight && "bg-emerald-50 text-emerald-700"
-            )}
-          >
-            {chip.icon}
-            <span>{chip.label}</span>
-          </span>
-        ))}
+        {infoChips.map((chip, index) => {
+          if (chip.isStrength) {
+            return (
+              <span
+                key={`strength-${index}`}
+                className={clsx(
+                  "inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/40 bg-slate-100/80 text-slate-600",
+                  chip.className
+                )}
+                title={chip.title}
+                aria-label={chip.title}
+              >
+                {chip.icon ? (
+                  <chip.icon size={16} className={clsx("shrink-0", chip.iconClassName)} />
+                ) : null}
+                <span className="sr-only">{chip.title}</span>
+              </span>
+            );
+          }
+
+          return (
+            <span
+              key={`${chip.label}-${index}`}
+              className={clsx(
+                "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600",
+                chip.className
+              )}
+            >
+              {chip.icon ? (
+                <chip.icon size={14} className={clsx("shrink-0 text-slate-400", chip.iconClassName)} />
+              ) : null}
+              <span className="leading-tight">{chip.label}</span>
+            </span>
+          );
+        })}
       </div>
 
       {/* FEATURE 6: Share Button + Favorites */}
