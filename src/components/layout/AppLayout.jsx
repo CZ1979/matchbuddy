@@ -12,7 +12,7 @@ export default function AppLayout() {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-white text-slate-900">
+    <div className="min-h-screen bg-gradient-to-b from-emerald-100 via-slate-100 to-slate-200 text-slate-900">
       <header className="sticky top-0 z-30 border-b border-emerald-100/70 bg-white/80 backdrop-blur">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between px-4 py-3">
           <Link to="/feed" className="flex items-center gap-2 text-lg font-semibold text-emerald-600">

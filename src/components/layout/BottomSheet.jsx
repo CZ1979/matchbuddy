@@ -14,16 +14,13 @@ export default function BottomSheet({ open, onClose, title, children, footer }) 
     if (!open) return undefined;
     lastActiveRef.current = document.activeElement;
     const sheet = sheetRef.current;
-    const focusFirst = () => {
+    const focusSheet = () => {
       if (!sheet) return;
-      const focusable = sheet.querySelectorAll(FOCUSABLE_SELECTOR);
-      if (focusable.length > 0) {
-        focusable[0].focus();
-      } else {
-        sheet.focus();
+      if (typeof sheet.focus === "function") {
+        sheet.focus({ preventScroll: true });
       }
     };
-    const timeout = window.setTimeout(focusFirst, 20);
+    const timeout = window.setTimeout(focusSheet, 20);
     return () => window.clearTimeout(timeout);
   }, [open]);
 
@@ -66,11 +63,8 @@ export default function BottomSheet({ open, onClose, title, children, footer }) 
       if (!sheet) return;
       if (!sheet.contains(event.target)) {
         event.stopPropagation();
-        const focusable = sheet.querySelectorAll(FOCUSABLE_SELECTOR);
-        if (focusable.length > 0) {
-          focusable[0].focus();
-        } else {
-          sheet.focus();
+        if (typeof sheet.focus === "function") {
+          sheet.focus({ preventScroll: true });
         }
       }
     };
