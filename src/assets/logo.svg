@@ -12,8 +12,8 @@
     <text x="0" y="40" font-family="Poppins, Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" font-size="44" font-weight="700" fill="#101820" letter-spacing="0.2">
       Match<tspan fill="#00B86B">Buddy</tspan>
     </text>
-    <text x="0" y="70" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" font-size="16" fill="#4B5563">
-      Find your match
+    <text x="0" y="70" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" font-size="26" fill="#4B5563">
+      Find your match!
     </text>
   </g>
 </svg>
