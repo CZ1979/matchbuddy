@@ -12,7 +12,7 @@ import { formatDateGerman } from "../utils/date";
 import { normalizeAgeGroup } from "../utils/ageGroups";
 import { buildGoogleMapsRouteUrl } from "../lib/maps";
 import { geocodePlace } from "../lib/geocode";
-import { buildWhatsappUrl } from "../utils/phone";
+import { buildWhatsAppUrl as buildWhatsappUrl } from "../lib/whatsapp";
 import {
   addDoc,
   collection,

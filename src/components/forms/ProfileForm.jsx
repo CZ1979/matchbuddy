@@ -61,9 +61,13 @@ export default function ProfileForm({ values = {}, onChange, onSubmit, isSaving 
       </label>
 
       <label className="block text-sm font-medium text-slate-700">
-        E‑Mail <span className="text-xs font-normal text-slate-400">(optional)</span>
+        <span className="flex items-center justify-between">
+          <span>E‑Mail</span>
+          <span className="text-xs font-normal text-slate-400">Wird nicht veröffentlicht</span>
+        </span>
         <input
           type="email"
+          required
           value={values.email || ""}
           onChange={handleField("email")}
           className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"

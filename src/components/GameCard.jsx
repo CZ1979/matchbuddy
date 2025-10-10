@@ -188,7 +188,7 @@ export default function GameCard({
 
       {/* FEATURE 6: Share Button + Favorites */}
       <div className="mt-6 space-y-3">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-2 md:grid-cols-2 md:gap-3">
           <a
             href={hasWhatsapp ? whatsappUrl : undefined}
             target="_blank"

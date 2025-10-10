@@ -12,6 +12,7 @@ import { db } from "../firebase";
 import { normalizePhoneNumber } from "../lib/whatsapp";
 import { geocodePlace } from "../lib/geocode";
 import { normalizeAgeGroup } from "../utils/ageGroups";
+import { toPhoneObject } from "../utils/phone";
 
 const PROFILE_STORAGE_KEY = "trainerProfile";
 const PROFILE_ID_KEY = "trainerProfileId";
@@ -56,13 +57,16 @@ const mapLegacyProfile = (profile, profileId, storedEmail = "") => {
         .filter((value) => typeof value === "string" && value.trim() !== "")
     )
   );
+  const phoneObject = profile.phone ? toPhoneObject(profile.phone) : toPhoneObject(null);
+  const normalizedPhone = normalizePhoneNumber(phoneObject);
   return {
     id: resolvedId,
     firstName,
     lastName: remaining,
     fullName,
     club: profile.club || "",
-    phone: profile.phone || "",
+    phone: phoneObject,
+    phoneNormalized: normalizedPhone,
     email: resolvedEmail,
     emailNormalized: normalizedEmail,
     city: profile.city || profile.locationLabel || "",
@@ -144,13 +148,21 @@ export function ProfileProvider({ children }) {
               )
             )
           : [];
+        const phoneValue =
+          data.phone ||
+          (data.phoneCountryCode || data.phoneNumber
+            ? { countryCode: data.phoneCountryCode, number: data.phoneNumber }
+            : null);
+        const phoneObject = toPhoneObject(phoneValue);
+        const normalizedPhone = normalizePhoneNumber(phoneObject);
         const nextProfile = {
           id: targetId,
           firstName: data.firstName || data.fullName?.split(" ")[0] || "",
           lastName: data.lastName || data.fullName?.split(" ").slice(1).join(" ") || "",
           fullName: data.fullName || [data.firstName, data.lastName].filter(Boolean).join(" "),
           club: data.club || "",
-          phone: data.phone || "",
+          phone: phoneObject,
+          phoneNormalized: normalizedPhone,
           email: data.email || "",
           emailNormalized: data.emailNormalized || normalizeEmail(data.email || targetId),
           city: data.city || "",
@@ -173,7 +185,7 @@ export function ProfileProvider({ children }) {
 
   const saveProfile = useCallback(
     async (input, { geocode = true } = {}) => {
-      if (!input || !input.name || !input.club || !input.city || !input.phone) {
+      if (!input || !input.name || !input.club || !input.city || !input.phone || !input.email) {
         throw new Error("Profil unvollständig");
       }
 
@@ -195,9 +207,11 @@ export function ProfileProvider({ children }) {
         const trimmedName = input.name.trim();
         const [firstName, ...rest] = trimmedName.split(/\s+/);
         const lastName = rest.join(" ");
-        const normalizedPhone = normalizePhoneNumber(input.phone || "");
         const trimmedEmail = (input.email || "").trim();
-        const normalizedEmail = trimmedEmail ? normalizeEmail(trimmedEmail) : "";
+        if (!trimmedEmail) {
+          throw new Error("Profil unvollständig");
+        }
+        const normalizedEmail = normalizeEmail(trimmedEmail);
         const generatedId =
           typeof globalThis.crypto !== "undefined" &&
           typeof globalThis.crypto.randomUUID === "function"
@@ -215,13 +229,18 @@ export function ProfileProvider({ children }) {
           lastCityRef.current = input.city;
         }
 
+        const phoneObject = toPhoneObject(input.phone);
+        if (!phoneObject.number) {
+          throw new Error("Telefonnummer fehlt");
+        }
+
         const nextProfile = {
           id,
           firstName,
           lastName,
           fullName: trimmedName,
           club: input.club.trim(),
-          phone: normalizedPhone,
+          phone: phoneObject,
           email: trimmedEmail,
           emailNormalized: normalizedEmail,
           city: input.city.trim(),
@@ -235,9 +254,14 @@ export function ProfileProvider({ children }) {
           ageGroups: normalizedAgeGroups,
         };
 
+        const normalizedPhone = normalizePhoneNumber(phoneObject);
         const payload = {
           ...nextProfile,
           location: nextProfile.location,
+          phone: phoneObject,
+          phoneNormalized: normalizedPhone,
+          phoneCountryCode: phoneObject.countryCode,
+          phoneNumber: phoneObject.number,
           email: nextProfile.email || null,
           emailNormalized: nextProfile.emailNormalized || null,
           updatedAt: serverTimestamp(),
@@ -246,7 +270,11 @@ export function ProfileProvider({ children }) {
         const ref = doc(db, "profiles", id);
         await setDoc(ref, payload, { merge: true });
 
-        persistProfile(nextProfile);
+        persistProfile({
+          ...nextProfile,
+          phone: phoneObject,
+          phoneNormalized: normalizedPhone,
+        });
         return nextProfile;
       } finally {
         setIsSaving(false);
