@@ -1,3 +1,4 @@
+import { useEffect, useId, useRef, useState } from "react";
 import clsx from "clsx";
 import {
   BarChart3,
@@ -13,6 +14,8 @@ import {
 import { buildGoogleMapsRouteUrl } from "../lib/maps";
 import { formatDateGerman } from "../utils/date";
 import { buildWhatsAppUrl } from "../lib/whatsapp";
+import { TEAM_STRENGTH_LEVELS } from "../data/teamStrengthLevels";
+import { getStrengthPalette } from "../utils/strengthPalette";
 
 const WhatsAppIcon = (props) => (
   <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
@@ -38,13 +41,18 @@ const formatAgeGroupLabel = (value) => {
   return str;
 };
 
-const resolveBadge = (game) => {
-  if (!game) return "Gegner gesucht";
-  if (typeof game.matchType === "string") {
-    if (game.matchType.toLowerCase().includes("freund")) return "Freundschaftsspiel";
-  }
-  if (game.notes && /freundschaft/i.test(game.notes)) return "Freundschaftsspiel";
-  return "Gegner gesucht";
+const toStrengthChip = (strength) => {
+  const palette = getStrengthPalette(strength);
+  if (!palette) return null;
+
+  const descriptor = TEAM_STRENGTH_LEVELS.find((level) => level.value === palette.value)?.label;
+
+  return {
+    label: `Stärke ${palette.value}`,
+    title: descriptor || `Stärke ${palette.value}`,
+    className: palette.className,
+    iconClassName: palette.iconClassName,
+  };
 };
 
 const buildContactMessage = (game, profile) => {
@@ -76,11 +84,11 @@ export default function GameCard({
   isFavorite = false,
   onShare,
 }) {
-  const badgeLabel = resolveBadge(game);
   const dateLabel = game.date ? formatDateGerman(game.date) : "Datum folgt";
   const distanceLabel = toDistanceLabel(game.distanceKm);
   const ageGroupLabel = formatAgeGroupLabel(game.displayAgeGroup || game.originalAgeGroup || game.ageGroup);
-  const strengthLabel = game.strength ? `Stärke ${game.strength}` : "";
+  const trainerName = game.ownerName?.trim() || "Trainer unbekannt";
+  const strengthChip = toStrengthChip(game.strength);
   const whatsappUrl = buildWhatsAppUrl({
     phone: game.contactPhone,
     message: buildContactMessage(game, viewerProfile),
@@ -98,25 +106,30 @@ export default function GameCard({
   const infoChips = [
     {
       label: dateLabel,
-      icon: <CalendarDays size={14} />,
-      highlight: true,
+      icon: CalendarDays,
+      className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      iconClassName: "text-emerald-500",
     },
     game.time
       ? {
           label: game.time,
-          icon: <Clock size={14} />,
+          icon: Clock,
         }
       : null,
     ageGroupLabel
       ? {
           label: ageGroupLabel,
-          icon: <UsersRound size={14} />,
+          icon: UsersRound,
         }
       : null,
-    strengthLabel
+    strengthChip
       ? {
-          label: strengthLabel,
-          icon: <BarChart3 size={14} />,
+          icon: BarChart3,
+          label: strengthChip.label,
+          className: strengthChip.className,
+          iconClassName: strengthChip.iconClassName,
+          title: strengthChip.title,
+          isStrength: true,
         }
       : null,
   ].filter(Boolean);
@@ -124,16 +137,16 @@ export default function GameCard({
   return (
     <article
       className={clsx(
-        "relative overflow-hidden rounded-3xl p-5 shadow-lg shadow-emerald-100/70 ring-1 ring-emerald-100 transition-colors duration-200",
-        isSaved ? "bg-emerald-50/80 ring-2 ring-emerald-400 shadow-emerald-200/80" : "bg-white hover:bg-emerald-50/60",
+        "relative rounded-3xl border border-white/70 bg-white p-5 shadow-xl shadow-emerald-100/60 transition-colors duration-200",
+        isSaved ? "bg-emerald-50/80 ring-2 ring-emerald-400" : "hover:bg-emerald-50/60",
         isInactive && "opacity-60"
       )}
     >
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600" />
+      <div className="absolute inset-x-0 top-0 h-1 rounded-t-3xl bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600" />
       <div className="flex items-start justify-between gap-4">
         <div>
-          <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-600">
-            {badgeLabel}
+          <span className="inline-flex items-center rounded-full bg-emerald-50/80 px-3 py-1 text-xs font-semibold text-emerald-700">
+            {trainerName}
           </span>
           <h3 className="mt-3 text-xl font-semibold text-slate-900">
             {game.ownerClub || "Unbekannter Verein"}
@@ -172,18 +185,26 @@ export default function GameCard({
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600">
-        {infoChips.map((chip, index) => (
-          <span
-            key={`${chip.label}-${index}`}
-            className={clsx(
-              "inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1",
-              chip.highlight && "bg-emerald-50 text-emerald-700"
-            )}
-          >
-            {chip.icon}
-            <span>{chip.label}</span>
-          </span>
-        ))}
+        {infoChips.map((chip, index) => {
+          if (chip.isStrength) {
+            return <StrengthBadge key={`strength-${index}`} chip={chip} />;
+          }
+
+          return (
+            <span
+              key={`${chip.label}-${index}`}
+              className={clsx(
+                "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600",
+                chip.className
+              )}
+            >
+              {chip.icon ? (
+                <chip.icon size={14} className={clsx("shrink-0 text-slate-400", chip.iconClassName)} />
+              ) : null}
+              <span className="leading-tight">{chip.label}</span>
+            </span>
+          );
+        })}
       </div>
 
       {/* FEATURE 6: Share Button + Favorites */}
@@ -245,5 +266,81 @@ export default function GameCard({
         </div>
       </div>
     </article>
+  );
+}
+
+function StrengthBadge({ chip }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const tooltipId = useId();
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event) => {
+      if (!containerRef.current) return;
+      if (!containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    const handleFocusIn = (event) => {
+      if (!containerRef.current) return;
+      if (!containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("focusin", handleFocusIn);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("focusin", handleFocusIn);
+    };
+  }, [isOpen]);
+
+  const accessibleLabel = chip.title ? `${chip.label} – ${chip.title}` : chip.label;
+
+  return (
+    <span className="relative inline-flex" ref={containerRef}>
+      <button
+        type="button"
+        className={clsx(
+          "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition",
+          chip.className,
+          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+        )}
+        aria-expanded={isOpen}
+        aria-label={accessibleLabel}
+        aria-describedby={isOpen ? tooltipId : undefined}
+        onClick={() => setIsOpen((prev) => !prev)}
+      >
+        {chip.icon ? <chip.icon size={16} className={clsx("shrink-0", chip.iconClassName)} /> : null}
+        <span className="leading-tight">{chip.label}</span>
+      </button>
+      <span
+        role="tooltip"
+        id={tooltipId}
+        className={clsx(
+          "pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-44 -translate-x-1/2 rounded-2xl bg-slate-900/95 p-3 text-left text-xs font-medium text-white shadow-lg transition",
+          isOpen ? "opacity-100" : "opacity-0"
+        )}
+      >
+        <span className="block text-[0.7rem] font-semibold uppercase tracking-wide text-white/70">Teamstärke</span>
+        <span className="mt-1 block text-sm font-semibold text-white">{chip.label}</span>
+        {chip.title && (
+          <span className="mt-1 block text-[0.75rem] font-medium text-white/80">{chip.title}</span>
+        )}
+      </span>
+    </span>
   );
 }
