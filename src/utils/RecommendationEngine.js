@@ -90,6 +90,42 @@ const deriveUserPreferences = (userGames = []) => {
   };
 };
 
+/**
+ * Heuristik: prüft, ob ein Spiel sehr gut zu den bisherigen Spielen und dem Profil passt.
+ * Kriterien (konfigurierbar): Jahrgang (normalized), Teamstärke und geographische Nähe.
+ * Liefert boolean zurück.
+ */
+export function isHighlySimilar(game, profile = null, userGames = [], userLocation = null) {
+  if (!game) return false;
+
+  // enrich game with normalized ageGroup and distance
+  const enriched = enrichGame(game, userLocation);
+
+  const preferences = deriveUserPreferences(userGames);
+
+  // age match (reuse matchesAgeGroup logic)
+  const gameAge = enriched.normalizedAgeGroup;
+  const preferredAge = preferences.preferredAgeGroup || (Array.isArray(profile?.ageGroups) && profile.ageGroups[0]) || "";
+  const ageMatch = matchesAgeGroup(gameAge, preferredAge, preferences.strengthEstimate);
+
+  // strength match: if we have an estimate, require within 1 point (stricter)
+  const gameStrength = toNumberOrNull(game.strength);
+  const strengthEstimate = preferences.strengthEstimate;
+  const strengthMatch =
+    strengthEstimate == null || gameStrength == null
+      ? true
+      : Math.abs(gameStrength - strengthEstimate) <= 1.0;
+
+  // region match: if distance available and userLocation provided, within 15km
+  const regionMatch =
+    hasLocation(userLocation) && typeof enriched.distanceKm === "number"
+      ? enriched.distanceKm <= 15
+      : true; // if we can't determine distance, don't block
+
+  // require at least age and region to match; strength is helpful but optional
+  return Boolean(ageMatch && regionMatch && strengthMatch);
+}
+
 const scoreGame = (game, preferences, userLocation) => {
   const strength = toNumberOrNull(game.strength);
   const strengthDelta =

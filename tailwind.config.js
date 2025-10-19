@@ -14,7 +14,14 @@ module.exports = {
           '0%': { transform: 'scale(1)' },
           '50%': { transform: 'scale(1.02)' },
           '100%': { transform: 'scale(1)' }
-        }
+        },
+        'bounce-slight': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-6%)' },
+        },
+      },
+      animation: {
+        'bounce-slight': 'bounce-slight 1.2s cubic-bezier(0.4,0,0.6,1) infinite',
       },
     },
   },

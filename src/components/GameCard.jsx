@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import clsx from "clsx";
 import {
+  Award,
   BarChart3,
   Bookmark,
   CalendarDays,
@@ -83,6 +84,7 @@ export default function GameCard({
   onToggleFavorite,
   isFavorite = false,
   onShare,
+  isHighlySimilar = false,
 }) {
   const dateLabel = game.date ? formatDateGerman(game.date) : "Datum folgt";
   const distanceLabel = toDistanceLabel(game.distanceKm);
@@ -161,22 +163,45 @@ export default function GameCard({
             )}
           </p>
         </div>
-        {/* FEATURE 6: Share Button + Favorites */}
-        <button
-          type="button"
-          onClick={() => onToggleFavorite?.(game)}
-          className={clsx(
-            "inline-flex h-9 w-9 items-center justify-center rounded-full border transition",
-            isFavorite
-              ? "border-emerald-300 bg-emerald-50 text-emerald-600"
-              : "border-slate-200 text-slate-500 hover:border-emerald-400 hover:text-emerald-600"
+        <div className="flex items-center gap-2">
+          {/* Top-Match Badge Icon */}
+          {isHighlySimilar && (
+            <div className="group relative">
+              <div
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-amber-50 border border-amber-200 text-amber-600 shadow-md animate-bounce-slight cursor-help transition-transform duration-300 hover:scale-110"
+                tabIndex={0}
+                aria-label="Top-Match"
+              >
+                <Award size={20} className="text-amber-500" strokeWidth={2.5} />
+              </div>
+              <span
+                className="pointer-events-none absolute right-0 top-full z-20 mt-2 w-48 rounded-xl bg-slate-900/95 p-3 text-xs text-white shadow-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200"
+                role="tooltip"
+              >
+                <span className="block text-sm font-bold">Top-Match</span>
+                <span className="mt-1 block font-medium text-white/90">
+                  Passt sehr gut zu deinem Profil (Jahrgang, Stärke, Region).
+                </span>
+              </span>
+            </div>
           )}
-          title={isFavorite ? "Gemerkt" : "Merken"}
-          aria-pressed={isFavorite}
-        >
-          <Bookmark size={18} className={clsx(isFavorite && "fill-current text-emerald-500")} />
-          <span className="sr-only">Favorisieren</span>
-        </button>
+          {/* FEATURE 6: Share Button + Favorites */}
+          <button
+            type="button"
+            onClick={() => onToggleFavorite?.(game)}
+            className={clsx(
+              "inline-flex h-9 w-9 items-center justify-center rounded-full border transition",
+              isFavorite
+                ? "border-emerald-300 bg-emerald-50 text-emerald-600"
+                : "border-slate-200 text-slate-500 hover:border-emerald-400 hover:text-emerald-600"
+            )}
+            title={isFavorite ? "Gemerkt" : "Merken"}
+            aria-pressed={isFavorite}
+          >
+            <Bookmark size={18} className={clsx(isFavorite && "fill-current text-emerald-500")} />
+            <span className="sr-only">Favorisieren</span>
+          </button>
+        </div>
       </div>
 
       {/* FEATURE 4: Game Status + Undo */}

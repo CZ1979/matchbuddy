@@ -8,6 +8,7 @@ import BottomSheet from "../components/layout/BottomSheet";
 import { useProfile } from "../hooks/useProfile";
 import { useUserLocation } from "../hooks/useUserLocation";
 import useGamesQuery from "../hooks/useGamesQuery";
+import { isHighlySimilar } from "../utils/RecommendationEngine";
 import { formatDateGerman } from "../utils/date";
 import { normalizeAgeGroup } from "../utils/ageGroups";
 import { buildGoogleMapsRouteUrl } from "../lib/maps";
@@ -80,7 +81,7 @@ export default function Feed() {
     [filters.location, geoLocation, profile?.location]
   );
 
-  const { games, isLoading: isLoadingGames, error } = useGamesQuery({
+  const { games, isLoading: isLoadingGames, error, userGames } = useGamesQuery({
     profile,
     viewerLocation,
     filters,
@@ -245,18 +246,22 @@ export default function Feed() {
       ) : (
         <>
           <div className="grid gap-6 sm:grid-cols-2">
-            {games.map((game) => (
-              <GameCard
-                key={game.id}
-                game={game}
-                viewerProfile={profile}
-                onDetails={setSelectedGame}
-                isSaved={Boolean(favoritesMap[game.id])}
-                onToggleFavorite={handleToggleFavorite}
-                isFavorite={Boolean(favoritesMap[game.id])}
-                onShare={shareGame}
-              />
-            ))}
+            {games.map((game) => {
+              const similar = isHighlySimilar(game, profile, userGames || [], viewerLocation);
+              return (
+                <GameCard
+                  key={game.id}
+                  game={game}
+                  viewerProfile={profile}
+                  onDetails={setSelectedGame}
+                  isSaved={Boolean(favoritesMap[game.id])}
+                  onToggleFavorite={handleToggleFavorite}
+                  isFavorite={Boolean(favoritesMap[game.id])}
+                  onShare={shareGame}
+                  isHighlySimilar={similar}
+                />
+              );
+            })}
           </div>
         </>
       )}

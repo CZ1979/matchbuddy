@@ -234,6 +234,7 @@ export function useGamesQuery({ profile, viewerLocation, filters = {} }) {
     isLoading,
     error,
     location: activeLocation,
+    userGames: combinedUserGames,
   };
 }
 
