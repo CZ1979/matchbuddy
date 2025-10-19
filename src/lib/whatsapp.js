@@ -15,7 +15,14 @@ export function ensurePlusPrefix(value) {
   if (str === "") return "";
   if (str.startsWith("00")) return `+${str.slice(2).replace(/\D/g, "")}`;
   if (str.startsWith("+")) return `+${str.slice(1).replace(/\D/g, "")}`;
-  return `+${str.replace(/\D/g, "")}`;
+  
+  // Wenn die Nummer mit 0 beginnt, füge deutsche Vorwahl hinzu
+  const cleaned = str.replace(/\D/g, "");
+  if (cleaned.startsWith("0")) {
+    return `+49${cleaned.slice(1)}`;
+  }
+  
+  return `+${cleaned}`;
 }
 
 
@@ -26,7 +33,13 @@ export const buildWhatsAppUrl = ({ phone, message = "" }) => {
   if (!normalizedPhone) return "";
   const base = `https://wa.me/${normalizedPhone}`;
   if (!message) return base;
-  return `${base}?text=${encodeURIComponent(message)}`;
+  // Nutze encodeURI statt encodeURIComponent für konsistentere URL-Kodierung
+  return `${base}?text=${message.split('').map(char => {
+    // Explizit kodieren: Leerzeichen und Sonderzeichen
+    if (char === ' ') return '%20';
+    if (char === '!') return '%21';
+    return encodeURIComponent(char);
+  }).join('')}`;
 };
 
 export default {

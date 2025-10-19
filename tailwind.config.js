@@ -9,6 +9,13 @@ module.exports = {
         sans: ["Inter", "system-ui", "sans-serif"],
         heading: ["Rubik", "sans-serif"],
       },
+      keyframes: {
+        scale: {
+          '0%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.02)' },
+          '100%': { transform: 'scale(1)' }
+        }
+      },
     },
   },
   plugins: [require("daisyui")],

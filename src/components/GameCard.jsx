@@ -137,12 +137,14 @@ export default function GameCard({
   return (
     <article
       className={clsx(
-        "relative rounded-3xl border border-white/70 bg-white p-5 shadow-xl shadow-emerald-100/60 transition-colors duration-200",
-        isSaved ? "bg-emerald-50/80 ring-2 ring-emerald-400" : "hover:bg-emerald-50/60",
+        "relative rounded-3xl border border-white/70 bg-white p-5 shadow-xl shadow-emerald-100/60 transition-all duration-200",
+        isSaved ? [
+          "bg-emerald-50/80 ring-2 ring-emerald-400",
+          "animate-[scale_0.2s_ease-out]"
+        ] : "hover:bg-emerald-50/60",
         isInactive && "opacity-60"
       )}
     >
-      <div className="absolute inset-x-0 top-0 h-1 rounded-t-3xl bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600" />
       <div className="flex items-start justify-between gap-4">
         <div>
           <span className="inline-flex items-center rounded-full bg-emerald-50/80 px-3 py-1 text-xs font-semibold text-emerald-700">
