@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/logo.svg";
 import ProfileForm from "../components/forms/ProfileForm";
+import PhoneVerification from "../components/PhoneVerification";
 import { useProfile } from "../hooks/useProfile";
 import { toPhoneObject } from "../utils/phone";
 import { Info } from "lucide-react";
@@ -21,17 +22,21 @@ const toInitialValues = (profile) => {
     city: profile?.city || "",
     email: profile?.email || profile?.id || "",
     phone: phoneObj,
+    phoneVerified: profile?.phoneVerified || false,
     ageGroups: Array.isArray(profile?.ageGroups) ? profile.ageGroups : [],
   };
 };
 
 export default function Onboarding() {
-  const { profile, saveProfile, isSaving, profileCompleted } = useProfile();
+  const { profile, saveProfile, isSaving } = useProfile();
   const [formValues, setFormValues] = useState(() => toInitialValues(profile));
   const [error, setError] = useState("");
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [showVerification, setShowVerification] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  
+  const isEditMode = new URLSearchParams(location.search).get("edit") === "1";
 
   useEffect(() => {
     setFormValues(toInitialValues(profile));
@@ -41,14 +46,55 @@ export default function Onboarding() {
     setError("");
     try {
       await saveProfile(formValues, { geocode: true });
+      
+      // If in edit mode, just navigate back
+      if (isEditMode) {
+        navigate("/feed", { replace: true });
+        return;
+      }
+      
+      // Check if phone is already verified
+      if (profile?.phoneVerified) {
+        // Phone already verified, navigate immediately
+        if (!(location.state && location.state.from?.pathname === "/neues-spiel")) {
+          navigate("/feed", { replace: true });
+        } else {
+          navigate(location.state.from.pathname, { replace: true });
+        }
+      } else {
+        // Show verification step
+        setShowVerification(true);
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Profil konnte nicht gespeichert werden. Bitte überprüfe deine Angaben.");
+    }
+  };
+
+  const handlePhoneVerified = async () => {
+    try {
+      // Update profile with phoneVerified = true
+      await saveProfile({ ...formValues, phoneVerified: true }, { geocode: false });
+      
+      // Navigate to the next page
       if (!(location.state && location.state.from?.pathname === "/neues-spiel")) {
         navigate("/feed", { replace: true });
       } else {
         navigate(location.state.from.pathname, { replace: true });
       }
     } catch (err) {
-      console.error(err);
-      setError("Profil konnte nicht gespeichert werden. Bitte überprüfe deine Angaben.");
+      console.error("Fehler beim Aktualisieren des Verifizierungsstatus:", err);
+      setError("Fehler beim Aktualisieren des Profils. Bitte versuche es erneut.");
+    }
+  };
+
+  const handleSkipVerification = async () => {
+    // For now, allow skipping but keep phoneVerified as false
+    // In a production environment, you might want to block this
+    if (!(location.state && location.state.from?.pathname === "/neues-spiel")) {
+      navigate("/feed", { replace: true });
+    } else {
+      navigate(location.state.from.pathname, { replace: true });
     }
   };
 
@@ -83,7 +129,21 @@ export default function Onboarding() {
           )}
 
           <div className="mt-6">
-            <ProfileForm values={formValues} onChange={setFormValues} onSubmit={handleSubmit} isSaving={isSaving} />
+            {!showVerification ? (
+              <ProfileForm 
+                values={formValues} 
+                onChange={setFormValues} 
+                onSubmit={handleSubmit} 
+                isSaving={isSaving}
+                showVerificationStatus={isEditMode}
+              />
+            ) : (
+              <PhoneVerification
+                phoneNumber={formValues.phone}
+                onVerified={handlePhoneVerified}
+                onSkip={handleSkipVerification}
+              />
+            )}
           </div>
         </div>
       </div>

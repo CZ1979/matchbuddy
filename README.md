@@ -39,6 +39,7 @@ Viele Trainer kennen das Problem:
 
 - ✅ Erstellung und Verwaltung von Spielen (`games`)
 - ✅ Trainerprofile mit Club, Ort, Kontaktdaten (`profiles`)
+- ✅ **Telefonnummern-Verifikation** über Firebase Phone Authentication (SMS)
 - ✅ Anzeige passender Spiele im Umkreis
 - ✅ Kontaktaufnahme über WhatsApp mit Click-to-Chat
 - ✅ PWA (Installierbar wie eine native App)
@@ -61,7 +62,11 @@ Viele Trainer kennen das Problem:
   "club": "SKG Sprendlingen",
   "city": "Dreieich",
   "email": "christof@skg.de",
-  "phone": "+491701234567",
+  "phone": {
+    "countryCode": "+49",
+    "number": "1701234567"
+  },
+  "phoneVerified": true,
   "lat": 50.001,
   "lon": 8.700
 }
@@ -117,6 +122,23 @@ VITE_FIREBASE_STORAGE_BUCKET=...
 VITE_FIREBASE_MESSAGING_SENDER_ID=...
 VITE_FIREBASE_APP_ID=...
 ```
+
+#### Firebase Phone Authentication einrichten
+
+1. **Firebase Console öffnen**: Gehe zu [Firebase Console](https://console.firebase.google.com/)
+2. **Authentication aktivieren**: 
+   - Navigiere zu "Build" → "Authentication" → "Sign-in method"
+   - Aktiviere "Phone" als Anmeldemethode
+3. **Autorisierte Domains hinzufügen**:
+   - Füge deine Domain(s) zu den autorisierten Domains hinzu (z.B. `localhost`, `friendly-match-finder-2ff7a.web.app`)
+   - Für lokale Entwicklung: `localhost` ist standardmäßig autorisiert
+4. **Testnummern einrichten** (optional für Entwicklung):
+   - Gehe zu "Authentication" → "Settings" → "Phone numbers for testing"
+   - Füge Testnummern mit Verifikationscodes hinzu (z.B. `+49 1234567890` mit Code `123456`)
+   - Diese Nummern können ohne tatsächliche SMS verwendet werden
+5. **reCAPTCHA konfigurieren**:
+   - Firebase verwendet automatisch reCAPTCHA für die Verifizierung
+   - Stelle sicher, dass deine Domain in den reCAPTCHA-Einstellungen autorisiert ist
 
 ### 4️⃣ Lokaler Start
 ```bash

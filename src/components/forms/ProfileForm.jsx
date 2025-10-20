@@ -2,10 +2,9 @@ import React, { useMemo } from "react";
 import clsx from "clsx";
 import { generateAgeGroups } from "../../utils/ageGroups";
 import PhoneInput from "../PhoneInput";
+import { CheckCircle2, XCircle } from "lucide-react";
 
-const formatPhoneInput = (value) => value.replace(/[^+\d\s]/g, "");
-
-export default function ProfileForm({ values = {}, onChange, onSubmit, isSaving }) {
+export default function ProfileForm({ values = {}, onChange, onSubmit, isSaving, showVerificationStatus = false }) {
   const ageGroupOptions = useMemo(() => generateAgeGroups(), []);
   const selectedAgeGroups = Array.isArray(values.ageGroups) ? values.ageGroups : [];
 
@@ -74,10 +73,32 @@ export default function ProfileForm({ values = {}, onChange, onSubmit, isSaving 
         />
       </label>
 
-      <PhoneInput
-        value={values.phone || { countryCode: "+49", number: "" }}
-        onChange={(phone) => onChange({ ...values, phone })}
-      />
+      <div className="space-y-2">
+        <PhoneInput
+          value={values.phone || { countryCode: "+49", number: "" }}
+          onChange={(phone) => onChange({ ...values, phone })}
+        />
+        {showVerificationStatus && (
+          <div className={clsx(
+            "flex items-center gap-2 rounded-xl px-3 py-2 text-sm",
+            values.phoneVerified
+              ? "bg-emerald-50 text-emerald-700"
+              : "bg-amber-50 text-amber-700"
+          )}>
+            {values.phoneVerified ? (
+              <>
+                <CheckCircle2 className="h-4 w-4" />
+                <span className="font-medium">Verifiziert</span>
+              </>
+            ) : (
+              <>
+                <XCircle className="h-4 w-4" />
+                <span className="font-medium">Nicht verifiziert</span>
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
       <fieldset className="space-y-3">
         <legend className="block text-sm font-medium text-slate-700">Bevorzugte Jahrgänge</legend>
