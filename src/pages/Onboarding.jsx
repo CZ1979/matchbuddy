@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/logo.svg";
 import ProfileForm from "../components/forms/ProfileForm";
+import PhoneVerification from "../components/PhoneVerification";
 import { useProfile } from "../hooks/useProfile";
 import { toPhoneObject } from "../utils/phone";
 import { Info } from "lucide-react";
@@ -21,35 +22,162 @@ const toInitialValues = (profile) => {
     city: profile?.city || "",
     email: profile?.email || profile?.id || "",
     phone: phoneObj,
+    phoneVerified: profile?.phoneVerified || false,
     ageGroups: Array.isArray(profile?.ageGroups) ? profile.ageGroups : [],
   };
 };
 
 export default function Onboarding() {
-  const { profile, saveProfile, isSaving, profileCompleted } = useProfile();
+  const { profile, saveProfile, isSaving } = useProfile();
   const [formValues, setFormValues] = useState(() => toInitialValues(profile));
   const [error, setError] = useState("");
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [showVerification, setShowVerification] = useState(false);
+  const [originalPhone, setOriginalPhone] = useState(() => {
+    const phoneObj = toPhoneObject(
+      profile?.phone || {
+        countryCode: profile?.phoneCountryCode,
+        number: profile?.phoneNumber,
+      }
+    );
+    return phoneObj;
+  });
+  const [originalPhoneVerified, setOriginalPhoneVerified] = useState(() => profile?.phoneVerified || false);
   const navigate = useNavigate();
   const location = useLocation();
+  
+  const searchParams = new URLSearchParams(location.search);
+  const isEditMode = searchParams.get("edit") === "1";
+  const shouldVerify = searchParams.get("verify") === "1";
 
   useEffect(() => {
-    setFormValues(toInitialValues(profile));
-  }, [profile]);
+    const initialValues = toInitialValues(profile);
+    setFormValues(initialValues);
+    
+    // Update original phone when profile changes
+    const phoneObj = toPhoneObject(
+      profile?.phone || {
+        countryCode: profile?.phoneCountryCode,
+        number: profile?.phoneNumber,
+      }
+    );
+    setOriginalPhone(phoneObj);
+    setOriginalPhoneVerified(profile?.phoneVerified || false);
+    
+    // If verify parameter is set and phone is not verified, show verification
+    if (shouldVerify && profile && !profile.phoneVerified) {
+      setShowVerification(true);
+    }
+  }, [profile, shouldVerify]);
+
+  // Function to check if phone number has changed from original
+  const hasPhoneChanged = (currentPhone) => {
+    return (
+      currentPhone.countryCode !== originalPhone.countryCode ||
+      currentPhone.number !== originalPhone.number
+    );
+  };
+
+  // Function to check if phone matches the original verified phone
+  const isOriginalVerifiedPhone = (currentPhone) => {
+    return (
+      originalPhoneVerified &&
+      currentPhone.countryCode === originalPhone.countryCode &&
+      currentPhone.number === originalPhone.number
+    );
+  };
+
+  // Custom setFormValues that manages phoneVerified based on phone changes
+  const handleFormChange = (newValues) => {
+    // Check if the current phone matches the original verified phone
+    if (newValues.phone && isOriginalVerifiedPhone(newValues.phone)) {
+      // Restore verified status if phone matches original verified phone
+      setFormValues({ ...newValues, phoneVerified: true });
+    } else if (newValues.phone && hasPhoneChanged(newValues.phone)) {
+      // Reset verification status if phone changed
+      setFormValues({ ...newValues, phoneVerified: false });
+    } else {
+      setFormValues(newValues);
+    }
+  };
+
+  const handleStartVerification = () => {
+    setShowVerification(true);
+  };
 
   const handleSubmit = async () => {
     setError("");
+    
+    // In edit mode, if phone changed and not verified, prevent submission
+    if (isEditMode && hasPhoneChanged(formValues.phone) && !formValues.phoneVerified) {
+      setError("Bitte verifiziere deine neue Telefonnummer, bevor du das Profil speichern kannst.");
+      return;
+    }
+    
     try {
       await saveProfile(formValues, { geocode: true });
+      
+      // If in edit mode, just navigate back
+      if (isEditMode) {
+        navigate("/feed", { replace: true });
+        return;
+      }
+      
+      // Check if phone is already verified
+      if (formValues.phoneVerified) {
+        // Phone already verified, navigate immediately
+        if (!(location.state && location.state.from?.pathname === "/neues-spiel")) {
+          navigate("/feed", { replace: true });
+        } else {
+          navigate(location.state.from.pathname, { replace: true });
+        }
+      } else {
+        // Show verification step
+        setShowVerification(true);
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Profil konnte nicht gespeichert werden. Bitte überprüfe deine Angaben.");
+    }
+  };
+
+  const handlePhoneVerified = async () => {
+    try {
+      // Update profile with phoneVerified = true
+      await saveProfile({ ...formValues, phoneVerified: true }, { geocode: false });
+      
+      // In edit mode, go back to form after verification
+      if (isEditMode) {
+        setShowVerification(false);
+        // Update form values to reflect verified status
+        setFormValues({ ...formValues, phoneVerified: true });
+        // Update original phone to new verified phone
+        setOriginalPhone(formValues.phone);
+        setOriginalPhoneVerified(true);
+        return;
+      }
+      
+      // Navigate to the next page (onboarding flow)
       if (!(location.state && location.state.from?.pathname === "/neues-spiel")) {
         navigate("/feed", { replace: true });
       } else {
         navigate(location.state.from.pathname, { replace: true });
       }
     } catch (err) {
-      console.error(err);
-      setError("Profil konnte nicht gespeichert werden. Bitte überprüfe deine Angaben.");
+      console.error("Fehler beim Aktualisieren des Verifizierungsstatus:", err);
+      setError("Fehler beim Aktualisieren des Profils. Bitte versuche es erneut.");
     }
+  };
+
+  const handleSkipVerification = async () => {
+    // In edit mode, go back to form
+    if (isEditMode) {
+      setShowVerification(false);
+      return;
+    }
+    
+    // In onboarding, don't allow skipping - just go back to form
+    setShowVerification(false);
   };
 
   return (
@@ -83,7 +211,23 @@ export default function Onboarding() {
           )}
 
           <div className="mt-6">
-            <ProfileForm values={formValues} onChange={setFormValues} onSubmit={handleSubmit} isSaving={isSaving} />
+            {!showVerification ? (
+              <ProfileForm 
+                values={formValues} 
+                onChange={handleFormChange} 
+                onSubmit={handleSubmit} 
+                isSaving={isSaving}
+                showVerificationStatus={isEditMode}
+                onStartVerification={isEditMode ? handleStartVerification : null}
+                canSave={!isEditMode || !hasPhoneChanged(formValues.phone) || formValues.phoneVerified}
+              />
+            ) : (
+              <PhoneVerification
+                phoneNumber={formValues.phone}
+                onVerified={handlePhoneVerified}
+                onSkip={handleSkipVerification}
+              />
+            )}
           </div>
         </div>
       </div>

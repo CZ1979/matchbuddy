@@ -2,6 +2,8 @@ import clsx from "clsx";
 import { Home, Star, Trophy, UserRound } from "lucide-react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import logo from "../../assets/logo.svg";
+import VerificationBanner from "../VerificationBanner";
+import { useProfile } from "../../hooks/useProfile";
 
 const navItems = [
   { href: "/feed", label: "Feed", icon: Home },
@@ -11,6 +13,7 @@ const navItems = [
 
 export default function AppLayout() {
   const location = useLocation();
+  const { profile } = useProfile();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-100 via-slate-100 to-slate-200 text-slate-900">
@@ -86,6 +89,8 @@ export default function AppLayout() {
           </div>
         </div>
       </header>
+
+      <VerificationBanner phoneVerified={profile?.phoneVerified} />
 
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-4 pb-24 pt-6">
         <Outlet />

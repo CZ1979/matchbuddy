@@ -67,6 +67,7 @@ const mapLegacyProfile = (profile, profileId, storedEmail = "") => {
     club: profile.club || "",
     phone: phoneObject,
     phoneNormalized: normalizedPhone,
+    phoneVerified: profile.phoneVerified || false,
     email: resolvedEmail,
     emailNormalized: normalizedEmail,
     city: profile.city || profile.locationLabel || "",
@@ -163,6 +164,7 @@ export function ProfileProvider({ children }) {
           club: data.club || "",
           phone: phoneObject,
           phoneNormalized: normalizedPhone,
+          phoneVerified: data.phoneVerified || false,
           email: data.email || "",
           emailNormalized: data.emailNormalized || normalizeEmail(data.email || targetId),
           city: data.city || "",
@@ -241,6 +243,7 @@ export function ProfileProvider({ children }) {
           fullName: trimmedName,
           club: input.club.trim(),
           phone: phoneObject,
+          phoneVerified: input.phoneVerified !== undefined ? input.phoneVerified : (profile?.phoneVerified || false),
           email: trimmedEmail,
           emailNormalized: normalizedEmail,
           city: input.city.trim(),
@@ -260,6 +263,7 @@ export function ProfileProvider({ children }) {
           location: nextProfile.location,
           phone: phoneObject,
           phoneNormalized: normalizedPhone,
+          phoneVerified: nextProfile.phoneVerified,
           phoneCountryCode: phoneObject.countryCode,
           phoneNumber: phoneObject.number,
           email: nextProfile.email || null,
@@ -274,13 +278,14 @@ export function ProfileProvider({ children }) {
           ...nextProfile,
           phone: phoneObject,
           phoneNormalized: normalizedPhone,
+          phoneVerified: nextProfile.phoneVerified,
         });
         return nextProfile;
       } finally {
         setIsSaving(false);
       }
     },
-    [persistProfile, profile?.id, profile?.location?.lat, profile?.location?.lng, profileId]
+    [persistProfile, profile?.id, profile?.location?.lat, profile?.location?.lng, profile?.phoneVerified, profileId]
   );
 
   useEffect(() => {
