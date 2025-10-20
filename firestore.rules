@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is the owner
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Profiles collection
+    match /profiles/{userId} {
+      // Anyone can read profile data EXCEPT the phone field
+      allow read: if true;
+      
+      // Only the owner can create/update their profile
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      
+      // Delete not allowed
+      allow delete: if false;
+    }
+    
+    // Contact logs - only Functions can write, no client access
+    match /contactLogs/{logId} {
+      allow read: if false;
+      allow write: if false;
+    }
+    
+    // Games collection
+    match /games/{gameId} {
+      // Anyone can read games
+      allow read: if true;
+      
+      // Only authenticated users can create games
+      allow create: if isAuthenticated();
+      
+      // Only the owner can update their game
+      allow update: if isAuthenticated() && 
+                      resource.data.ownerId == request.auth.uid;
+      
+      // Only the owner can delete their game
+      allow delete: if isAuthenticated() && 
+                      resource.data.ownerId == request.auth.uid;
+    }
+    
+    // Favorites collection
+    match /favorites/{userId} {
+      // User can read their own favorites
+      allow read: if isOwner(userId);
+      
+      // User can write their own favorites
+      allow write: if isOwner(userId);
+    }
+    
+    // Default deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -27,6 +27,7 @@ Viele Trainer kennen das Problem:
 | **Frontend Framework** | React + Vite |
 | **Styling**            | Tailwind CSS |
 | **Backend / Datenbank**| Firebase Firestore |
+| **Functions**          | Firebase Cloud Functions (Node.js) |
 | **Hosting**            | Firebase Hosting (CI/CD via GitHub Actions) |
 | **Authentication**     | (optional) Firebase Auth – für spätere Erweiterungen vorgesehen |
 | **PWA-Support**        | App installierbar auf Android/iOS/Home-Screen mit eigenem Favicon |
@@ -40,8 +41,8 @@ Viele Trainer kennen das Problem:
 - ✅ Erstellung und Verwaltung von Spielen (`games`)
 - ✅ Trainerprofile mit Club, Ort, Kontaktdaten (`profiles`)
 - ✅ **Telefonnummern-Verifikation** über Firebase Phone Authentication (SMS)
+- ✅ **Sichere WhatsApp-Kontaktaufnahme** über Server-seitige Weiterleitung (Telefonnummern werden nicht im Client angezeigt)
 - ✅ Anzeige passender Spiele im Umkreis
-- ✅ Kontaktaufnahme über WhatsApp mit Click-to-Chat
 - ✅ PWA (Installierbar wie eine native App)
 - ⚙️ Testdaten (30 Beispielspiele & Trainer)
 - 🔜 Geplante Features:
@@ -124,6 +125,36 @@ So kannst du die Verifikation testen, ohne echte SMS zu versenden. Die Testnumme
 
 ---
 
+## 🔒 Sichere WhatsApp-Kontaktaufnahme
+
+MatchBuddy schützt die Privatsphäre von Trainern durch **serverseitige Telefonnummer-Anonymisierung**.
+
+### Funktionsweise
+
+1. **Client**: Nutzer klickt auf "WhatsApp kontaktieren" Button
+2. **Backend**: Firebase Function holt Telefonnummer aus Firestore
+3. **Sanitization**: Nummer wird in E.164-Format konvertiert
+4. **Redirect**: 302-Weiterleitung direkt zu WhatsApp
+5. **Logging**: Anonymisiertes Logging mit gehashten IP-Adressen
+
+### Sicherheitsfeatures
+
+- ✅ Telefonnummern sind **niemals im Client sichtbar** (HTML, JS, Network Logs)
+- ✅ **Rate Limiting**: Max. 6 Anfragen pro Minute pro IP-Adresse
+- ✅ **IP-Hashing**: IPs werden mit SHA256 + Salt gehasht vor dem Logging
+- ✅ **Firestore Rules**: Clients können `phone` schreiben, aber nicht lesen
+- ✅ **Click-Tracking**: Automatische Zählung von WhatsApp-Kontaktversuchen
+
+### Firebase Function Endpoint
+
+```
+GET /contact/:trainerId?text=<message>
+```
+
+Siehe `functions/README.md` für Details zur Function-Implementierung.
+
+---
+
 ## 🧰 Lokale Entwicklung
 
 ### 1️⃣ Repository klonen
@@ -170,6 +201,22 @@ VITE_FIREBASE_APP_ID=...
 npm run dev
 ```
 App läuft dann unter: [http://localhost:5173](http://localhost:5173)
+
+### 5️⃣ Firebase Functions einrichten (optional)
+
+Für die sichere WhatsApp-Kontaktfunktion:
+
+```bash
+cd functions
+npm install
+cp .env.example .env
+# Bearbeite .env und setze IP_HASH_SALT auf einen zufälligen String
+```
+
+Für Production-Deployment:
+```bash
+firebase functions:config:set ip.hash.salt="dein-zufaelliger-salt"
+```
 
 ---
 

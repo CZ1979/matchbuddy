@@ -1,4 +1,10 @@
 {
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "functions": {
+    "source": "functions"
+  },
   "hosting": {
     "public": "dist",
     "ignore": [
@@ -7,6 +13,10 @@
       "**/node_modules/**"
     ],
     "rewrites": [
+      {
+        "source": "/contact/**",
+        "function": "contact"
+      },
       {
         "source": "**",
         "destination": "/index.html"

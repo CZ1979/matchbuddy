@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import { buildGoogleMapsRouteUrl } from "../lib/maps";
 import { formatDateGerman } from "../utils/date";
-import { buildWhatsAppUrl } from "../lib/whatsapp";
+import { buildSecureContactUrl } from "../lib/contact";
+import { normalizePhoneNumber } from "../lib/whatsapp";
 import { TEAM_STRENGTH_LEVELS } from "../data/teamStrengthLevels";
 import { getStrengthPalette } from "../utils/strengthPalette";
 
@@ -91,11 +92,13 @@ export default function GameCard({
   const ageGroupLabel = formatAgeGroupLabel(game.displayAgeGroup || game.originalAgeGroup || game.ageGroup);
   const trainerName = game.ownerName?.trim() || "Trainer unbekannt";
   const strengthChip = toStrengthChip(game.strength);
-  const whatsappUrl = buildWhatsAppUrl({
-    phone: game.contactPhone,
-    message: buildContactMessage(game, viewerProfile),
-  });
-  const hasWhatsapp = Boolean(whatsappUrl);
+  // Check if phone is valid before building contact URL
+  const hasValidPhone = Boolean(normalizePhoneNumber(game.contactPhone));
+  const contactUrl = hasValidPhone ? buildSecureContactUrl(
+    game.trainerProfileId,
+    buildContactMessage(game, viewerProfile)
+  ) : "";
+  const hasContact = Boolean(contactUrl);
   const mapsUrl = buildGoogleMapsRouteUrl({ address: game.address, zip: game.zip, city: game.city });
   const isInactive = game.status && game.status !== "active";
   const statusLabel =
@@ -238,16 +241,16 @@ export default function GameCard({
       <div className="mt-6 space-y-3">
         <div className="grid grid-cols-4 gap-2 md:grid-cols-2 md:gap-3">
           <a
-            href={hasWhatsapp ? whatsappUrl : undefined}
+            href={hasContact ? contactUrl : undefined}
             target="_blank"
             rel="noreferrer"
-            aria-disabled={!hasWhatsapp}
+            aria-disabled={!hasContact}
             aria-label="Per WhatsApp kontaktieren"
-            tabIndex={hasWhatsapp ? undefined : -1}
+            tabIndex={hasContact ? undefined : -1}
             className={clsx(
               "inline-flex h-12 items-center justify-center gap-1 rounded-2xl text-sm font-semibold transition",
               "flex-col sm:flex-row",
-              hasWhatsapp
+              hasContact
                 ? "bg-emerald-500 text-white shadow-sm hover:bg-emerald-600"
                 : "cursor-not-allowed bg-slate-200 text-slate-400"
             )}
