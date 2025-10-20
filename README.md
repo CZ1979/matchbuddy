@@ -99,6 +99,31 @@ Viele Trainer kennen das Problem:
 
 ---
 
+## 📞 Telefonnummern-Verifikation
+
+MatchBuddy nutzt **Firebase Phone Authentication** zur Verifizierung von Telefonnummern. Dies stellt sicher, dass nur echte Trainer:innen mit verifizierten Kontaktdaten die App nutzen können.
+
+### Funktionsweise
+
+1. **Onboarding**: Nach dem Ausfüllen des Profils erscheint der Verifikations-Schritt
+2. **SMS-Code**: Nutzer erhalten einen 6-stelligen Code per SMS
+3. **Verifizierung**: Nach Eingabe des Codes wird `phoneVerified = true` im Profil gesetzt
+4. **Status-Anzeige**: Im Profil wird der Verifizierungsstatus angezeigt
+5. **Banner**: Nicht-verifizierte Nutzer sehen einen Banner mit Aufforderung zur Verifikation
+
+### Testumgebung
+
+Für die lokale Entwicklung und Tests sollten **Testnummern** in Firebase konfiguriert werden:
+
+```
+Testnummer: +49 1234567890
+Code: 123456
+```
+
+So kannst du die Verifikation testen, ohne echte SMS zu versenden. Die Testnummern werden in der Firebase Console unter "Authentication" → "Settings" → "Phone numbers for testing" hinzugefügt.
+
+---
+
 ## 🧰 Lokale Entwicklung
 
 ### 1️⃣ Repository klonen
