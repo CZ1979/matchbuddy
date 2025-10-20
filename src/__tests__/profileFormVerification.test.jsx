@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import ProfileForm from "../components/forms/ProfileForm";
 
@@ -70,5 +70,87 @@ describe("ProfileForm - Phone Verification Reset", () => {
 
     expect(screen.queryByText("Verifiziert")).not.toBeInTheDocument();
     expect(screen.queryByText("Nicht verifiziert")).not.toBeInTheDocument();
+  });
+
+  it("displays verification button when phone is not verified and onStartVerification is provided", () => {
+    const values = {
+      name: "Test User",
+      club: "Test Club",
+      city: "Test City",
+      email: "test@example.com",
+      phone: { countryCode: "+49", number: "1234567890" },
+      phoneVerified: false,
+      ageGroups: ["U9"],
+    };
+
+    const mockStartVerification = vi.fn();
+
+    render(
+      <BrowserRouter>
+        <ProfileForm 
+          values={values} 
+          onChange={vi.fn()} 
+          onSubmit={vi.fn()} 
+          showVerificationStatus={true}
+          onStartVerification={mockStartVerification}
+        />
+      </BrowserRouter>
+    );
+
+    expect(screen.getByText("Nummer jetzt verifizieren")).toBeInTheDocument();
+  });
+
+  it("does not display verification button when phone is verified", () => {
+    const values = {
+      name: "Test User",
+      club: "Test Club",
+      city: "Test City",
+      email: "test@example.com",
+      phone: { countryCode: "+49", number: "1234567890" },
+      phoneVerified: true,
+      ageGroups: ["U9"],
+    };
+
+    const mockStartVerification = vi.fn();
+
+    render(
+      <BrowserRouter>
+        <ProfileForm 
+          values={values} 
+          onChange={vi.fn()} 
+          onSubmit={vi.fn()} 
+          showVerificationStatus={true}
+          onStartVerification={mockStartVerification}
+        />
+      </BrowserRouter>
+    );
+
+    expect(screen.queryByText("Nummer jetzt verifizieren")).not.toBeInTheDocument();
+  });
+
+  it("disables save button when canSave is false", () => {
+    const values = {
+      name: "Test User",
+      club: "Test Club",
+      city: "Test City",
+      email: "test@example.com",
+      phone: { countryCode: "+49", number: "1234567890" },
+      phoneVerified: false,
+      ageGroups: ["U9"],
+    };
+
+    render(
+      <BrowserRouter>
+        <ProfileForm 
+          values={values} 
+          onChange={vi.fn()} 
+          onSubmit={vi.fn()} 
+          canSave={false}
+        />
+      </BrowserRouter>
+    );
+
+    const saveButton = screen.getByRole("button", { name: /Profil speichern/i });
+    expect(saveButton).toBeDisabled();
   });
 });

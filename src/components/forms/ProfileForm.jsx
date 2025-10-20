@@ -4,7 +4,15 @@ import { generateAgeGroups } from "../../utils/ageGroups";
 import PhoneInput from "../PhoneInput";
 import { CheckCircle2, XCircle } from "lucide-react";
 
-export default function ProfileForm({ values = {}, onChange, onSubmit, isSaving, showVerificationStatus = false }) {
+export default function ProfileForm({ 
+  values = {}, 
+  onChange, 
+  onSubmit, 
+  isSaving, 
+  showVerificationStatus = false,
+  onStartVerification = null,
+  canSave = true,
+}) {
   const ageGroupOptions = useMemo(() => generateAgeGroups(), []);
   const selectedAgeGroups = Array.isArray(values.ageGroups) ? values.ageGroups : [];
 
@@ -79,22 +87,33 @@ export default function ProfileForm({ values = {}, onChange, onSubmit, isSaving,
           onChange={(phone) => onChange({ ...values, phone })}
         />
         {showVerificationStatus && (
-          <div className={clsx(
-            "flex items-center gap-2 rounded-xl px-3 py-2 text-sm",
-            values.phoneVerified
-              ? "bg-emerald-50 text-emerald-700"
-              : "bg-amber-50 text-amber-700"
-          )}>
-            {values.phoneVerified ? (
-              <>
-                <CheckCircle2 className="h-4 w-4" />
-                <span className="font-medium">Verifiziert</span>
-              </>
-            ) : (
-              <>
-                <XCircle className="h-4 w-4" />
-                <span className="font-medium">Nicht verifiziert</span>
-              </>
+          <div className="space-y-2">
+            <div className={clsx(
+              "flex items-center gap-2 rounded-xl px-3 py-2 text-sm",
+              values.phoneVerified
+                ? "bg-emerald-50 text-emerald-700"
+                : "bg-amber-50 text-amber-700"
+            )}>
+              {values.phoneVerified ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span className="font-medium">Verifiziert</span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-4 w-4" />
+                  <span className="font-medium">Nicht verifiziert</span>
+                </>
+              )}
+            </div>
+            {!values.phoneVerified && onStartVerification && (
+              <button
+                type="button"
+                onClick={onStartVerification}
+                className="w-full rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 transition"
+              >
+                Nummer jetzt verifizieren
+              </button>
             )}
           </div>
         )}
@@ -135,8 +154,8 @@ export default function ProfileForm({ values = {}, onChange, onSubmit, isSaving,
       <div className="mt-4 flex justify-end">
         <button
           type="submit"
-          disabled={isSaving}
-          className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-600 disabled:opacity-60"
+          disabled={isSaving || !canSave}
+          className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isSaving ? "Speichern…" : "Profil speichern"}
         </button>

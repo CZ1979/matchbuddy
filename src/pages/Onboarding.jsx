@@ -42,6 +42,7 @@ export default function Onboarding() {
     );
     return phoneObj;
   });
+  const [originalPhoneVerified, setOriginalPhoneVerified] = useState(() => profile?.phoneVerified || false);
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -61,6 +62,7 @@ export default function Onboarding() {
       }
     );
     setOriginalPhone(phoneObj);
+    setOriginalPhoneVerified(profile?.phoneVerified || false);
     
     // If verify parameter is set and phone is not verified, show verification
     if (shouldVerify && profile && !profile.phoneVerified) {
@@ -68,7 +70,7 @@ export default function Onboarding() {
     }
   }, [profile, shouldVerify]);
 
-  // Function to check if phone number has changed
+  // Function to check if phone number has changed from original
   const hasPhoneChanged = (currentPhone) => {
     return (
       currentPhone.countryCode !== originalPhone.countryCode ||
@@ -76,18 +78,42 @@ export default function Onboarding() {
     );
   };
 
-  // Custom setFormValues that resets phoneVerified when phone changes
+  // Function to check if phone matches the original verified phone
+  const isOriginalVerifiedPhone = (currentPhone) => {
+    return (
+      originalPhoneVerified &&
+      currentPhone.countryCode === originalPhone.countryCode &&
+      currentPhone.number === originalPhone.number
+    );
+  };
+
+  // Custom setFormValues that manages phoneVerified based on phone changes
   const handleFormChange = (newValues) => {
-    // If phone changed and profile was verified, reset verification status
-    if (newValues.phone && profile?.phoneVerified && hasPhoneChanged(newValues.phone)) {
+    // Check if the current phone matches the original verified phone
+    if (newValues.phone && isOriginalVerifiedPhone(newValues.phone)) {
+      // Restore verified status if phone matches original verified phone
+      setFormValues({ ...newValues, phoneVerified: true });
+    } else if (newValues.phone && hasPhoneChanged(newValues.phone)) {
+      // Reset verification status if phone changed
       setFormValues({ ...newValues, phoneVerified: false });
     } else {
       setFormValues(newValues);
     }
   };
 
+  const handleStartVerification = () => {
+    setShowVerification(true);
+  };
+
   const handleSubmit = async () => {
     setError("");
+    
+    // In edit mode, if phone changed and not verified, prevent submission
+    if (isEditMode && hasPhoneChanged(formValues.phone) && !formValues.phoneVerified) {
+      setError("Bitte verifiziere deine neue Telefonnummer, bevor du das Profil speichern kannst.");
+      return;
+    }
+    
     try {
       await saveProfile(formValues, { geocode: true });
       
@@ -98,7 +124,7 @@ export default function Onboarding() {
       }
       
       // Check if phone is already verified
-      if (profile?.phoneVerified) {
+      if (formValues.phoneVerified) {
         // Phone already verified, navigate immediately
         if (!(location.state && location.state.from?.pathname === "/neues-spiel")) {
           navigate("/feed", { replace: true });
@@ -120,7 +146,18 @@ export default function Onboarding() {
       // Update profile with phoneVerified = true
       await saveProfile({ ...formValues, phoneVerified: true }, { geocode: false });
       
-      // Navigate to the next page
+      // In edit mode, go back to form after verification
+      if (isEditMode) {
+        setShowVerification(false);
+        // Update form values to reflect verified status
+        setFormValues({ ...formValues, phoneVerified: true });
+        // Update original phone to new verified phone
+        setOriginalPhone(formValues.phone);
+        setOriginalPhoneVerified(true);
+        return;
+      }
+      
+      // Navigate to the next page (onboarding flow)
       if (!(location.state && location.state.from?.pathname === "/neues-spiel")) {
         navigate("/feed", { replace: true });
       } else {
@@ -133,9 +170,9 @@ export default function Onboarding() {
   };
 
   const handleSkipVerification = async () => {
-    // Allow skipping only in edit mode
+    // In edit mode, go back to form
     if (isEditMode) {
-      navigate("/feed", { replace: true });
+      setShowVerification(false);
       return;
     }
     
@@ -181,6 +218,8 @@ export default function Onboarding() {
                 onSubmit={handleSubmit} 
                 isSaving={isSaving}
                 showVerificationStatus={isEditMode}
+                onStartVerification={isEditMode ? handleStartVerification : null}
+                canSave={!isEditMode || !hasPhoneChanged(formValues.phone) || formValues.phoneVerified}
               />
             ) : (
               <PhoneVerification
