@@ -36,11 +36,18 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const location = useLocation();
   
-  const isEditMode = new URLSearchParams(location.search).get("edit") === "1";
+  const searchParams = new URLSearchParams(location.search);
+  const isEditMode = searchParams.get("edit") === "1";
+  const shouldVerify = searchParams.get("verify") === "1";
 
   useEffect(() => {
     setFormValues(toInitialValues(profile));
-  }, [profile]);
+    
+    // If verify parameter is set and phone is not verified, show verification
+    if (shouldVerify && profile && !profile.phoneVerified) {
+      setShowVerification(true);
+    }
+  }, [profile, shouldVerify]);
 
   const handleSubmit = async () => {
     setError("");
@@ -89,13 +96,14 @@ export default function Onboarding() {
   };
 
   const handleSkipVerification = async () => {
-    // For now, allow skipping but keep phoneVerified as false
-    // In a production environment, you might want to block this
-    if (!(location.state && location.state.from?.pathname === "/neues-spiel")) {
+    // Allow skipping only in edit mode
+    if (isEditMode) {
       navigate("/feed", { replace: true });
-    } else {
-      navigate(location.state.from.pathname, { replace: true });
+      return;
     }
+    
+    // In onboarding, don't allow skipping - just go back to form
+    setShowVerification(false);
   };
 
   return (

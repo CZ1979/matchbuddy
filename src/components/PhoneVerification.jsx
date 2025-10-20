@@ -181,7 +181,7 @@ export default function PhoneVerification({ phoneNumber, onVerified, onSkip }) {
                 disabled={isLoading}
                 className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Später
+                Zurück
               </button>
             )}
           </div>
