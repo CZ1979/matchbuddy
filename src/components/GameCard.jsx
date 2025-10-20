@@ -92,10 +92,10 @@ export default function GameCard({
   const trainerName = game.ownerName?.trim() || "Trainer unbekannt";
   const strengthChip = toStrengthChip(game.strength);
   const contactUrl = buildSecureContactUrl(
-    game.ownerId,
+    game.trainerProfileId,
     buildContactMessage(game, viewerProfile)
   );
-  const hasContact = Boolean(contactUrl);
+  const hasContact = Boolean(contactUrl && game.contactPhone);
   const mapsUrl = buildGoogleMapsRouteUrl({ address: game.address, zip: game.zip, city: game.city });
   const isInactive = game.status && game.status !== "active";
   const statusLabel =
