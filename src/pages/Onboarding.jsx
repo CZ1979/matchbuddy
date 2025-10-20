@@ -33,6 +33,15 @@ export default function Onboarding() {
   const [error, setError] = useState("");
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
+  const [originalPhone, setOriginalPhone] = useState(() => {
+    const phoneObj = toPhoneObject(
+      profile?.phone || {
+        countryCode: profile?.phoneCountryCode,
+        number: profile?.phoneNumber,
+      }
+    );
+    return phoneObj;
+  });
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -41,13 +50,41 @@ export default function Onboarding() {
   const shouldVerify = searchParams.get("verify") === "1";
 
   useEffect(() => {
-    setFormValues(toInitialValues(profile));
+    const initialValues = toInitialValues(profile);
+    setFormValues(initialValues);
+    
+    // Update original phone when profile changes
+    const phoneObj = toPhoneObject(
+      profile?.phone || {
+        countryCode: profile?.phoneCountryCode,
+        number: profile?.phoneNumber,
+      }
+    );
+    setOriginalPhone(phoneObj);
     
     // If verify parameter is set and phone is not verified, show verification
     if (shouldVerify && profile && !profile.phoneVerified) {
       setShowVerification(true);
     }
   }, [profile, shouldVerify]);
+
+  // Function to check if phone number has changed
+  const hasPhoneChanged = (currentPhone) => {
+    return (
+      currentPhone.countryCode !== originalPhone.countryCode ||
+      currentPhone.number !== originalPhone.number
+    );
+  };
+
+  // Custom setFormValues that resets phoneVerified when phone changes
+  const handleFormChange = (newValues) => {
+    // If phone changed and profile was verified, reset verification status
+    if (newValues.phone && profile?.phoneVerified && hasPhoneChanged(newValues.phone)) {
+      setFormValues({ ...newValues, phoneVerified: false });
+    } else {
+      setFormValues(newValues);
+    }
+  };
 
   const handleSubmit = async () => {
     setError("");
@@ -140,7 +177,7 @@ export default function Onboarding() {
             {!showVerification ? (
               <ProfileForm 
                 values={formValues} 
-                onChange={setFormValues} 
+                onChange={handleFormChange} 
                 onSubmit={handleSubmit} 
                 isSaving={isSaving}
                 showVerificationStatus={isEditMode}
