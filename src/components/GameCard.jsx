@@ -15,6 +15,7 @@ import {
 import { buildGoogleMapsRouteUrl } from "../lib/maps";
 import { formatDateGerman } from "../utils/date";
 import { buildSecureContactUrl } from "../lib/contact";
+import { normalizePhoneNumber } from "../lib/whatsapp";
 import { TEAM_STRENGTH_LEVELS } from "../data/teamStrengthLevels";
 import { getStrengthPalette } from "../utils/strengthPalette";
 
@@ -91,11 +92,13 @@ export default function GameCard({
   const ageGroupLabel = formatAgeGroupLabel(game.displayAgeGroup || game.originalAgeGroup || game.ageGroup);
   const trainerName = game.ownerName?.trim() || "Trainer unbekannt";
   const strengthChip = toStrengthChip(game.strength);
-  const contactUrl = buildSecureContactUrl(
+  // Check if phone is valid before building contact URL
+  const hasValidPhone = Boolean(normalizePhoneNumber(game.contactPhone));
+  const contactUrl = hasValidPhone ? buildSecureContactUrl(
     game.trainerProfileId,
     buildContactMessage(game, viewerProfile)
-  );
-  const hasContact = Boolean(contactUrl && game.contactPhone);
+  ) : "";
+  const hasContact = Boolean(contactUrl);
   const mapsUrl = buildGoogleMapsRouteUrl({ address: game.address, zip: game.zip, city: game.city });
   const isInactive = game.status && game.status !== "active";
   const statusLabel =
