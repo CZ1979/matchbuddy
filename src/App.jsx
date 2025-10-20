@@ -2,6 +2,7 @@ import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import AppLayout from "./components/layout/AppLayout";
 import Onboarding from "./pages/Onboarding";
 import Feed from "./pages/Feed";
+import Favorites from "./pages/Favorites";
 import Feedback from "./pages/Feedback";
 import NewGame from "./pages/NewGame";
 import { useProfile } from "./hooks/useProfile";
@@ -50,6 +51,7 @@ export default function App() {
         <Route element={<RequireProfile />}>
             <Route element={<AppLayout />}>
               <Route path="/feed" element={<Feed />} />
+              <Route path="/favoriten" element={<Favorites />} />
               <Route path="/neues-spiel" element={<NewGame />} />
               <Route path="/feedback" element={<Feedback />} />
             </Route>

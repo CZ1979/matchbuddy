@@ -1,10 +1,11 @@
 import clsx from "clsx";
-import { Home, Trophy, UserRound } from "lucide-react";
+import { Home, Star, Trophy, UserRound } from "lucide-react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import logo from "../../assets/logo.svg";
 
 const navItems = [
   { href: "/feed", label: "Feed", icon: Home },
+  { href: "/favoriten", label: "Favoriten", icon: Star },
   { href: "/neues-spiel", label: "Meine Spiele", icon: Trophy },
 ];
 
@@ -30,6 +31,18 @@ export default function AppLayout() {
               aria-label="Feed"
             >
               <Home size={18} />
+            </Link>
+            <Link
+              to="/favoriten"
+              className={clsx(
+                "inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 transition sm:hidden",
+                location.pathname === "/favoriten"
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-600"
+                  : "text-slate-500 hover:border-emerald-300 hover:text-emerald-600"
+              )}
+              aria-label="Favoriten"
+            >
+              <Star size={18} />
             </Link>
             <Link
               to="/neues-spiel"

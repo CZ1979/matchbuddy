@@ -3,13 +3,13 @@ import clsx from "clsx";
 import {
   Award,
   BarChart3,
-  Bookmark,
   CalendarDays,
   Clock,
   Info,
   MapPin,
   Navigation,
   Share2,
+  Star,
   UsersRound,
 } from "lucide-react";
 import { buildGoogleMapsRouteUrl } from "../lib/maps";
@@ -198,7 +198,7 @@ export default function GameCard({
             title={isFavorite ? "Gemerkt" : "Merken"}
             aria-pressed={isFavorite}
           >
-            <Bookmark size={18} className={clsx(isFavorite && "fill-current text-emerald-500")} />
+            <Star size={18} className={clsx(isFavorite && "fill-current text-emerald-500")} />
             <span className="sr-only">Favorisieren</span>
           </button>
         </div>
