@@ -1,37 +1,16 @@
 import clsx from "clsx";
 import { Home, Star, Trophy, UserRound } from "lucide-react";
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
-import { db } from "../../firebase";
-import { useProfile } from "../../hooks/useProfile";
 import logo from "../../assets/logo.svg";
+
+const navItems = [
+  { href: "/feed", label: "Feed", icon: Home },
+  { href: "/favoriten", label: "Favoriten", icon: Star },
+  { href: "/neues-spiel", label: "Meine Spiele", icon: Trophy },
+];
 
 export default function AppLayout() {
   const location = useLocation();
-  const { profile } = useProfile();
-  const [hasFavorites, setHasFavorites] = useState(false);
-
-  useEffect(() => {
-    if (!profile?.id) {
-      setHasFavorites(false);
-      return () => undefined;
-    }
-    const favoritesQuery = query(
-      collection(db, "favorites"),
-      where("trainerId", "==", profile.id)
-    );
-    const unsubscribe = onSnapshot(favoritesQuery, (snapshot) => {
-      setHasFavorites(!snapshot.empty);
-    });
-    return () => unsubscribe();
-  }, [profile?.id]);
-
-  const navItems = [
-    { href: "/feed", label: "Feed", icon: Home },
-    ...(hasFavorites ? [{ href: "/favoriten", label: "Favoriten", icon: Star }] : []),
-    { href: "/neues-spiel", label: "Meine Spiele", icon: Trophy },
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-100 via-slate-100 to-slate-200 text-slate-900">
@@ -53,20 +32,18 @@ export default function AppLayout() {
             >
               <Home size={18} />
             </Link>
-            {hasFavorites && (
-              <Link
-                to="/favoriten"
-                className={clsx(
-                  "inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 transition sm:hidden",
-                  location.pathname === "/favoriten"
-                    ? "border-emerald-300 bg-emerald-50 text-emerald-600"
-                    : "text-slate-500 hover:border-emerald-300 hover:text-emerald-600"
-                )}
-                aria-label="Favoriten"
-              >
-                <Star size={18} />
-              </Link>
-            )}
+            <Link
+              to="/favoriten"
+              className={clsx(
+                "inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 transition sm:hidden",
+                location.pathname === "/favoriten"
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-600"
+                  : "text-slate-500 hover:border-emerald-300 hover:text-emerald-600"
+              )}
+              aria-label="Favoriten"
+            >
+              <Star size={18} />
+            </Link>
             <Link
               to="/neues-spiel"
               className={clsx(

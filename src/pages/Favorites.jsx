@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, MapPin, Star } from "lucide-react";
+import { ExternalLink, Star } from "lucide-react";
 import GameCard from "../components/GameCard";
 import BottomSheet from "../components/layout/BottomSheet";
 import { useProfile } from "../hooks/useProfile";
@@ -78,7 +78,6 @@ export default function Favorites() {
     filters: {},
   });
 
-  const locationLabel = profile?.city || (viewerLocation ? "deinem Standort" : "Deutschland");
   const totalGames = games.length;
   const selectedGameAgeGroup = selectedGame ? normalizeAgeGroup(selectedGame.ageGroup) : "";
   const selectedGameRouteUrl = selectedGame
@@ -138,8 +137,8 @@ export default function Favorites() {
               <Star size={24} className="text-emerald-500" />
               Meine Favoriten
             </h2>
-            <p className="mt-1 flex items-center gap-2 text-sm text-slate-600">
-              <MapPin size={16} className="text-emerald-500" /> Basierend auf deinem Ort: {locationLabel}
+            <p className="mt-1 text-sm text-slate-600">
+              Alle von dir gespeicherten Spiele auf einen Blick
             </p>
             <p className="mt-3 text-sm font-medium text-emerald-600">
               {isLoadingGames
